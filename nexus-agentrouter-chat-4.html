@@ -521,6 +521,13 @@ function load(){
   try{ const s = JSON.parse(localStorage.getItem(LS)); if(s) cfg = {...cfg, ...s}; }catch(e){}
   // Backfill default proxy for older saved sessions that had it blank
   if(!cfg.proxy){ cfg.proxy = 'https://claudeai.monsiakhatun.workers.dev'; }
+  // When this page is SERVED from the VPS backend itself (http/https, not a
+  // local file://), default to backend mode pointed at its own origin — so
+  // the user only needs to paste the AGENT_TOKEN. A saved backendUrl wins.
+  if(location.protocol.startsWith('http') && !cfg.backendUrl){
+    cfg.backendUrl = location.origin;
+    cfg.conn = 'backend';
+  }
 }
 function save(){
   try{ localStorage.setItem(LS, JSON.stringify(cfg)); }catch(e){ toast('Could not save (private mode?)', true); }

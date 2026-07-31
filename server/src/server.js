@@ -4,6 +4,9 @@
 // default; expose it only through Cloudflare Tunnel / Caddy.
 
 import http from 'node:http';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 
 import config from './config.js';
@@ -39,6 +42,17 @@ app.use((req, res, next) => {
 // ── Public health check (no auth) ────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'nexus-agent', workspace: WORKSPACE_ROOT });
+});
+
+// ── Serve the Nexus frontend (no auth) ───────────────────────
+// Open the tunnel URL in a browser and the chat page loads, served from
+// the same origin as the backend — so it defaults to backend mode with
+// no CORS to configure. The AGENT_TOKEN is still entered by the user.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const FRONTEND = path.resolve(__dirname, '..', '..', 'nexus-agentrouter-chat-4.html');
+app.get(['/', '/app'], (_req, res) => {
+  if (fs.existsSync(FRONTEND)) return res.sendFile(FRONTEND);
+  res.status(404).send('frontend file not found next to the server');
 });
 
 // ── Everything else: auth + rate limit ───────────────────────
