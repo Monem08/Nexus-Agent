@@ -4,7 +4,7 @@
 //   think again → … → final answer.
 // Emits structured events via onEvent so the phone can show live activity.
 
-import { messagesWithTools } from '../providers/index.js';
+import { agentTurn } from '../providers/index.js';
 import { TOOL_SPECS, execTool } from './tools.js';
 import { audit, info } from '../logger.js';
 
@@ -25,27 +25,23 @@ How to work:
 //   {type:'final', text}             — the finished answer
 //   {type:'error', message}          — something went wrong
 export async function runAgent({ task, model, providerId, onEvent, signal, maxSteps = 8 }) {
-  const messages = [{ role: 'user', content: task }];
+  const history = [{ role: 'user', content: task }];
   audit('agent_start', { task: String(task).slice(0, 200) });
 
   for (let step = 0; step < maxSteps; step++) {
     if (signal?.aborted) return;
 
-    const resp = await messagesWithTools({
+    const { text, toolCalls, stop } = await agentTurn({
       providerId,
       model,
       system: AGENT_SYSTEM,
-      messages,
+      neutralMessages: history,
       tools: TOOL_SPECS,
       signal,
     });
 
-    const blocks = Array.isArray(resp.content) ? resp.content : [];
-    const text = blocks.filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
-    const toolUses = blocks.filter((b) => b.type === 'tool_use');
-
     // Finished: no more tools requested.
-    if (resp.stop_reason !== 'tool_use' || toolUses.length === 0) {
+    if (stop || toolCalls.length === 0) {
       onEvent({ type: 'final', text: text || '(the agent finished without a written answer)' });
       audit('agent_done', { steps: step });
       return;
@@ -53,21 +49,21 @@ export async function runAgent({ task, model, providerId, onEvent, signal, maxSt
 
     if (text) onEvent({ type: 'thinking', text });
 
-    // Record the assistant's turn verbatim (required for tool_result linkage).
-    messages.push({ role: 'assistant', content: blocks });
+    // Record the assistant's turn (required for tool-result linkage).
+    history.push({ role: 'assistant', text, toolCalls });
 
     // Execute each requested tool and collect results.
     const results = [];
-    for (const tu of toolUses) {
+    for (const tc of toolCalls) {
       if (signal?.aborted) return;
-      onEvent({ type: 'tool', name: tu.name, input: tu.input || {} });
-      info(`agent tool: ${tu.name}(${JSON.stringify(tu.input || {})})`);
-      const out = await execTool(tu.name, tu.input);
-      onEvent({ type: 'tool_result', name: tu.name, preview: out.slice(0, 240) });
-      results.push({ type: 'tool_result', tool_use_id: tu.id, content: out });
+      onEvent({ type: 'tool', name: tc.name, input: tc.input || {} });
+      info(`agent tool: ${tc.name}(${JSON.stringify(tc.input || {})})`);
+      const out = await execTool(tc.name, tc.input);
+      onEvent({ type: 'tool_result', name: tc.name, preview: out.slice(0, 240) });
+      results.push({ id: tc.id, name: tc.name, content: out });
     }
 
-    messages.push({ role: 'user', content: results });
+    history.push({ role: 'tool_results', results });
   }
 
   onEvent({ type: 'final', text: '(stopped: reached the step limit before finishing)' });

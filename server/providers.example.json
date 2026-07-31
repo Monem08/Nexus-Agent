@@ -1,0 +1,34 @@
+[
+  {
+    "id": "openrouter",
+    "preset": "openrouter",
+    "key": "sk-or-PASTE_YOUR_OPENROUTER_KEY",
+    "model": "meta-llama/llama-3.3-70b-instruct:free"
+  },
+  {
+    "id": "nvidia",
+    "preset": "nvidia",
+    "key": "nvapi-PASTE_YOUR_NVIDIA_KEY",
+    "model": "meta/llama-3.1-70b-instruct"
+  },
+  {
+    "id": "groq",
+    "preset": "groq",
+    "key": "gsk_PASTE_YOUR_GROQ_KEY",
+    "model": "llama-3.3-70b-versatile"
+  },
+  {
+    "id": "ollama",
+    "preset": "ollama",
+    "key": "ollama",
+    "model": "llama3.1"
+  },
+  {
+    "id": "custom-example",
+    "name": "My Custom Gateway",
+    "transport": "openai",
+    "baseUrl": "https://example.com/v1",
+    "key": "PASTE_KEY",
+    "model": "some-model"
+  }
+]

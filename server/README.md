@@ -68,6 +68,29 @@ OpenRouter `:free` models and NVIDIA NIM are the cheapest way to develop the
 agent loop (roadmap Phase 1 / cost note). Anthropic-shaped gateways
 (AgentRouter) work with `PROVIDER_TRANSPORT=anthropic`.
 
+## Multiple providers (Phase 1)
+
+The `.env` `PROVIDER_*` is the default provider. To offer more (and switch
+between them from the app's **Settings → AI Provider** menu), add
+`server/providers.json` — an array of entries. Use a preset for the common
+ones so you only supply a key and model:
+
+```json
+[
+  { "id": "openrouter", "preset": "openrouter", "key": "sk-or-...", "model": "meta-llama/llama-3.3-70b-instruct:free" },
+  { "id": "nvidia", "preset": "nvidia", "key": "nvapi-...", "model": "meta/llama-3.1-70b-instruct" }
+]
+```
+
+Presets: `agentrouter`, `openrouter`, `nvidia`, `groq`, `together`, `ollama`.
+For anything else, give `transport` (`openai` or `anthropic`) + `baseUrl`
+explicitly. See `providers.example.json`. Restart after editing. The file is
+gitignored (it holds keys). `GET /providers` lists them (never the keys).
+
+Agent mode (tool use) works on both `openai` and `anthropic` transports —
+so you can develop the agent on free OpenRouter/NVIDIA models and save
+AgentRouter credits for real runs.
+
 ## Run 24/7 with PM2
 
 ```bash

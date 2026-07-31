@@ -19,6 +19,7 @@ import chatRoutes from './routes/chat.js';
 import fileRoutes from './routes/files.js';
 import execRoutes from './routes/exec.js';
 import agentRoutes from './routes/agent.js';
+import providerRoutes from './routes/providers.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -63,6 +64,7 @@ app.use(chatRoutes);
 app.use(fileRoutes);
 app.use(execRoutes);
 app.use(agentRoutes);
+app.use(providerRoutes);
 
 // 404 + error handler
 app.use((_req, res) => res.status(404).json({ error: 'not found' }));

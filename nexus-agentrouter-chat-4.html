@@ -172,6 +172,7 @@
   .agent-step.tool{color:var(--cyan)}
   .agent-step.res{color:var(--txt-faint);padding-left:6px}
   .agent-step.err{color:var(--red)}
+  select#providerSel{font-family:var(--sans);font-size:14px;color:var(--txt);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;appearance:none;-webkit-appearance:none}
   .input-row{
     display:flex;align-items:flex-end;gap:8px;
     background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:6px 6px 6px 14px;
@@ -404,7 +405,16 @@
       <label>Backend URL &amp; Token</label>
       <input type="text" id="backendUrl" placeholder="https://agent.yourdomain.com" spellcheck="false" style="margin-bottom:8px">
       <input type="password" id="backendToken" placeholder="AGENT_TOKEN (bearer)" autocomplete="off" spellcheck="false">
-      <div class="hint">Your Nexus Agent backend and its <code>AGENT_TOKEN</code>. Sent as <code>Authorization: Bearer …</code> to <code>/chat</code>. Provider keys live on the server, not here.</div>
+      <div class="hint">Your Nexus Agent backend and its <code>AGENT_TOKEN</code>. Sent as <code>Authorization: Bearer …</code>. Provider keys live on the server, not here.</div>
+    </div>
+
+    <div class="field backend-only" id="providerField" style="display:none">
+      <label>AI Provider</label>
+      <div class="key-row">
+        <select id="providerSel" style="flex:1"></select>
+        <button class="ghost-btn" id="refreshProviders" title="Reload provider list">↻</button>
+      </div>
+      <div class="hint" id="providerHint">Which provider the VPS uses. Add more in <code>server/providers.json</code> (see <code>providers.example.json</code>).</div>
     </div>
 
     <div class="field">
@@ -513,8 +523,10 @@ let cfg = {
   conn:'direct',    // 'direct' (browser → gateway) | 'backend' (browser → VPS agent → gateway)
   backendUrl:'',    // e.g. https://agent.yourdomain.com  (Nexus Agent Phase 0 backend)
   backendToken:'',  // AGENT_TOKEN — bearer for the VPS backend
-  agentMode:false   // false = chat, true = agent (uses tools on the VPS)
+  agentMode:false,  // false = chat, true = agent (uses tools on the VPS)
+  providerId:''     // which backend provider to use ('' = server default)
 };
+let providerList = [];   // [{id,name,transport,model,hasKey,supportsTools}] from GET /providers
 let messages = [];       // {role, content} — current active session
 let streaming = false;
 let abortCtrl = null;
@@ -856,7 +868,7 @@ function buildBackendRequest(){
       'Content-Type':'application/json',
       'Authorization':'Bearer '+cfg.backendToken
     },
-    body: { model: cfg.model, messages: msgs, temperature: cfg.temp, stream: true }
+    body: { model: cfg.model, providerId: cfg.providerId || undefined, messages: msgs, temperature: cfg.temp, stream: true }
   };
 }
 
@@ -1159,7 +1171,7 @@ async function sendAgentTask(text){
 
   stopRequested=false;
   try{ abortCtrl = new AbortController(); }catch(_){ abortCtrl=null; }
-  const opts={ method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.backendToken}, body:JSON.stringify({task:text}) };
+  const opts={ method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.backendToken}, body:JSON.stringify({task:text, providerId: cfg.providerId || undefined}) };
   if(canUseSignal && abortCtrl){ try{ opts.signal=abortCtrl.signal; }catch(_){} }
 
   try{
@@ -1305,10 +1317,53 @@ function syncConnUI(){
     b.classList.toggle('on', b.dataset.conn===cfg.conn);
   });
   const bf = $('#backendFields'); if(bf) bf.style.display = cfg.conn==='backend' ? '' : 'none';
+  const pf = $('#providerField'); if(pf) pf.style.display = cfg.conn==='backend' ? '' : 'none';
   // Agent mode only makes sense in backend mode.
   if(cfg.conn!=='backend' && cfg.agentMode){ cfg.agentMode=false; }
   syncAgentToggle();
   updateKeyStatus();
+  if(cfg.conn==='backend') fetchProviders();
+}
+
+// Pull the list of providers the VPS backend has configured.
+async function fetchProviders(){
+  if(cfg.conn!=='backend' || !cfg.backendUrl || !cfg.backendToken) return;
+  try{
+    const r = await fetch(cfg.backendUrl.replace(/\/+$/,'')+'/providers', {
+      headers:{ 'Authorization':'Bearer '+cfg.backendToken }
+    });
+    if(!r.ok) return;
+    const j = await r.json();
+    providerList = Array.isArray(j.providers) ? j.providers : [];
+    renderProviders();
+  }catch(e){ /* offline / not reachable — leave list as-is */ }
+}
+
+function renderProviders(){
+  const sel = $('#providerSel'); if(!sel) return;
+  if(!providerList.length){ sel.innerHTML = '<option value="">(server default)</option>'; return; }
+  // Default to the first provider if none chosen yet.
+  if(!cfg.providerId) cfg.providerId = providerList[0].id;
+  sel.innerHTML = providerList.map(p=>{
+    const label = p.name + (p.model?(' · '+p.model):'') + (p.supportsTools?'':' (chat only)');
+    return `<option value="${esc(p.id)}"${p.id===cfg.providerId?' selected':''}>${esc(label)}</option>`;
+  }).join('');
+  applyProvider(cfg.providerId, false);
+}
+
+// Point the app's model/label at the chosen provider so the header + saved
+// sessions stay accurate. `persist` controls whether we save immediately.
+function applyProvider(id, persist){
+  const p = providerList.find(x=>x.id===id); if(!p) return;
+  cfg.providerId = id;
+  if(p.model){ cfg.model = p.model; cfg.modelLabel = p.name; }
+  const pill = $('#pillName'); if(pill) pill.textContent = cfg.modelLabel || cfg.model;
+  const sub = $('#hdrsub'); if(sub) sub.textContent = '· '+p.name.toLowerCase();
+  const hint = $('#providerHint');
+  if(hint && cfg.agentMode && !p.supportsTools){
+    hint.innerHTML = '<b style="color:var(--amber)">Heads up:</b> this provider is chat-only — agent mode needs a tool-capable one.';
+  }
+  if(persist) save();
 }
 function syncAgentToggle(){
   const b = $('#agentToggle'); if(!b) return;
@@ -1423,6 +1478,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
     const b = e.target.closest('button[data-conn]'); if(!b) return;
     cfg.conn = b.dataset.conn; syncConnUI();
   });
+
+  $('#providerSel').addEventListener('change', e=>{ applyProvider(e.target.value, true); });
+  $('#refreshProviders').onclick = ()=>{ fetchProviders(); toast('Reloading providers…'); };
 
   // Cloudflare Worker code → clipboard
   $('#getWorker').onclick = ()=>{
