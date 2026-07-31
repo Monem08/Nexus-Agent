@@ -83,7 +83,8 @@ const BLOCKED_PATTERNS = [
   /\bmkfs\b/i, // format a filesystem
   /\bdd\b[\s\S]*\bof=\/dev\//i, // overwrite a block device
   /\b(shutdown|reboot|halt|poweroff|init\s+0|init\s+6)\b/i,
-  /\b(:\s*\(\s*\)\s*\{|:\(\)\{)/, // classic fork bomb  :(){ :|:& };:
+  /\(\s*\)\s*\{[^}]*\|[^}]*&[^}]*\}\s*;/, // fork bomb: fn(){ …|…& };  (any name)
+  /:\s*\|\s*:\s*&/, // classic fork-bomb body  :|:&
   /\bchmod\s+-R?\s*0*777\s+\/(\s|$)/i, // chmod 777 /
   /\bchown\s+-R\b[\s\S]*\s\/(\s|$)/i,
   />\s*\/dev\/sd[a-z]/i, // write straight to a disk
