@@ -172,6 +172,44 @@ export async function* chatStream({ providerId, model, messages, temperature = 0
   }
 }
 
+// ── Tool-calling turn (for the agent loop) ───────────────────
+// One request that may come back with tool_use blocks. v1 supports the
+// anthropic transport (Claude models via AgentRouter), which has robust
+// tool use. Returns the raw Anthropic message: { content[], stop_reason }.
+export async function messagesWithTools({ providerId, model, system, messages, tools, signal, maxTokens = 4096 }) {
+  const p = getProvider(providerId);
+  if (!p) {
+    const err = new Error('no AI provider is configured. Set PROVIDER_* env vars in server/.env');
+    err.status = 503;
+    throw err;
+  }
+  if (p.transport !== 'anthropic') {
+    const err = new Error('agent mode currently requires an anthropic-transport provider (e.g. AgentRouter)');
+    err.status = 400;
+    throw err;
+  }
+  const useModel = model || p.model;
+  if (!useModel) {
+    const err = new Error('no model specified and provider has no default model');
+    err.status = 400;
+    throw err;
+  }
+
+  const resp = await fetch(`${p.baseUrl}/messages`, {
+    method: 'POST',
+    signal,
+    headers: anthropicHeaders(p.key),
+    body: JSON.stringify({ model: useModel, system, messages, tools, max_tokens: maxTokens }),
+  });
+  const raw = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const err = new Error(raw?.error?.message || `provider error ${resp.status}`);
+    err.status = resp.status === 401 ? 502 : resp.status;
+    throw err;
+  }
+  return raw;
+}
+
 async function openaiChat(p, model, messages, temperature, signal) {
   const resp = await fetch(`${p.baseUrl}/chat/completions`, {
     method: 'POST',

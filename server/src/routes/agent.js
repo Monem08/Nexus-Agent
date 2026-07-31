@@ -1,33 +1,66 @@
 // ── POST /agent ──────────────────────────────────────────────
-// Phase 0 placeholder for the agentic loop. The endpoint, auth, streaming
-// wiring, and contract are in place now so Phase 2 can drop the real
-// tool-calling loop in behind it without touching the transport layer.
+// Runs an agentic task and streams live steps back as SSE so the phone
+// shows the agent thinking and using tools. Each SSE line is:
+//   data: {"type":"tool","name":"list_files","input":{...}}
+//   data: {"type":"tool_result","name":"list_files","preview":"…"}
+//   data: {"type":"final","text":"…"}
+//   data: [DONE]
 //
-// For now it accepts a task, emits a couple of stream events, and returns
-// a "not yet implemented" acknowledgement so the UI can be built against it.
+// v1 tools are read-only (list_files / read_file / search_code).
 
 import { Router } from 'express';
+import { runAgent } from '../agent/loop.js';
 import { publish } from '../bus.js';
-import { info } from '../logger.js';
+import { info, error } from '../logger.js';
 
 const router = Router();
 
-router.post('/agent', (req, res) => {
-  const { task } = req.body || {};
+router.post('/agent', async (req, res) => {
+  const { task, model, providerId } = req.body || {};
   if (typeof task !== 'string' || !task.trim()) {
     return res.status(400).json({ error: 'task (string) is required' });
   }
 
-  const id = `task_${Date.now().toString(36)}`;
-  info(`agent task received (${id}): ${task.slice(0, 80)}`);
-  publish('agent:accepted', { id, task });
-
-  // Phase 2 will run the read/plan/edit/exec loop here and stream steps.
-  res.status(202).json({
-    id,
-    status: 'accepted',
-    note: 'agent loop lands in Phase 2 — endpoint reserved. Subscribe to /stream for updates.',
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
   });
+  res.flushHeaders?.();
+
+  const controller = new AbortController();
+  const onClose = () => {
+    if (!res.writableEnded) controller.abort();
+  };
+  res.on('close', onClose);
+
+  const send = (ev) => {
+    if (!res.writableEnded) res.write(`data: ${JSON.stringify(ev)}\n\n`);
+  };
+
+  info(`agent task: ${task.slice(0, 80)}`);
+  try {
+    await runAgent({
+      task,
+      model, // undefined → backend uses its default (tool-capable) model
+      providerId,
+      signal: controller.signal,
+      onEvent: (ev) => {
+        send(ev);
+        publish(`agent:${ev.type}`, ev); // also to WS /stream subscribers
+      },
+    });
+  } catch (e) {
+    if (!controller.signal.aborted) {
+      error('agent failed:', e.message);
+      send({ type: 'error', message: e.message });
+    }
+  } finally {
+    res.off('close', onClose);
+    if (!res.writableEnded) res.write('data: [DONE]\n\n');
+    res.end();
+  }
 });
 
 export default router;
