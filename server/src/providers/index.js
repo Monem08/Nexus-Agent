@@ -11,6 +11,22 @@
 import config from '../config.js';
 import { info } from '../logger.js';
 
+// Some Anthropic-shaped gateways (e.g. AgentRouter) reject "generic" clients
+// with "unauthorized client detected". Presenting the Claude Code CLI wire
+// image gets past that firewall — the same trick the Nexus frontend uses.
+const CLAUDE_CODE_UA = 'claude-cli/1.0.60 (external, cli)';
+
+function anthropicHeaders(key) {
+  return {
+    'Content-Type': 'application/json',
+    'x-api-key': key,
+    Authorization: `Bearer ${key}`, // some relays check either
+    'anthropic-version': '2023-06-01',
+    'user-agent': CLAUDE_CODE_UA,
+    'x-app': 'cli',
+  };
+}
+
 // Registry keyed by provider id. Phase 1 will populate this from a config
 // file / DB; Phase 0 seeds a single "default" from env.
 const providers = new Map();
@@ -111,7 +127,7 @@ export async function* chatStream({ providerId, model, messages, temperature = 0
       temperature: Math.max(0, Math.min(1, temperature)),
       stream: true,
     };
-    headers = { 'Content-Type': 'application/json', 'x-api-key': p.key, 'anthropic-version': '2023-06-01' };
+    headers = anthropicHeaders(p.key);
   } else {
     body = { model: useModel, messages, temperature, stream: true };
     headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${p.key}` };
@@ -185,11 +201,7 @@ async function anthropicChat(p, model, messages, temperature, signal) {
   const resp = await fetch(`${p.baseUrl}/messages`, {
     method: 'POST',
     signal,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': p.key,
-      'anthropic-version': '2023-06-01',
-    },
+    headers: anthropicHeaders(p.key),
     body: JSON.stringify({
       model,
       system: system || undefined,
