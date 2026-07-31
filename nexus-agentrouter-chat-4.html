@@ -173,6 +173,19 @@
   .agent-step.res{color:var(--txt-faint);padding-left:6px}
   .agent-step.err{color:var(--red)}
   select#providerSel{font-family:var(--sans);font-size:14px;color:var(--txt);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;appearance:none;-webkit-appearance:none}
+  .ap-card{border:1px solid var(--amber);border-radius:10px;margin:8px 0;overflow:hidden}
+  .ap-title{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--amber);padding:8px 12px;background:rgba(255,180,84,.08);display:flex;align-items:center;gap:6px}
+  .ap-body{font-family:var(--mono);font-size:11.5px;line-height:1.6;max-height:280px;overflow:auto;padding:8px 12px;background:var(--panel-2)}
+  .ap-body .d{white-space:pre-wrap;word-break:break-word}
+  .ap-body .add{color:#4ade80}
+  .ap-body .del{color:var(--red)}
+  .ap-body .ctx{color:var(--txt-dim)}
+  .ap-btns{display:flex;gap:8px;padding:10px 12px;background:var(--panel)}
+  .ap-btn{flex:1;font-family:var(--mono);font-size:13px;font-weight:700;padding:9px;border-radius:8px;border:1px solid var(--line);cursor:pointer}
+  .ap-btn.ok{background:var(--cyan);color:var(--ink);border-color:var(--cyan)}
+  .ap-btn.no{background:transparent;color:var(--red);border-color:var(--red)}
+  .ap-status{font-family:var(--mono);font-size:12px;padding:9px 12px;background:var(--panel)}
+  .ap-status.ok{color:#4ade80} .ap-status.no{color:var(--red)}
   .input-row{
     display:flex;align-items:flex-end;gap:8px;
     background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:6px 6px 6px 14px;
@@ -524,7 +537,8 @@ let cfg = {
   backendUrl:'',    // e.g. https://agent.yourdomain.com  (Nexus Agent Phase 0 backend)
   backendToken:'',  // AGENT_TOKEN — bearer for the VPS backend
   agentMode:false,  // false = chat, true = agent (uses tools on the VPS)
-  providerId:''     // which backend provider to use ('' = server default)
+  providerId:'',    // which backend provider to use ('' = server default)
+  autoApprove:false // true = agent runs writes/commands without asking (risky)
 };
 let providerList = [];   // [{id,name,transport,model,hasKey,supportsTools}] from GET /providers
 let messages = [];       // {role, content} — current active session
@@ -1159,19 +1173,40 @@ async function sendAgentTask(text){
 
   const contentEl = addMsg('assistant','');
   contentEl.classList.add('cursor-blink');
-  const steps=[]; let finalText='';
+  const items=[]; let finalText='';   // items: {step:html} or {ap:{...}}
   const render=()=>{
+    let inner='';
+    for(const it of items){
+      if(it.step!==undefined) inner += it.step;
+      else if(it.ap) inner += renderApproval(it.ap);
+    }
     let html='';
-    if(steps.length) html += '<div class="agent-steps">'+steps.join('')+'</div>';
+    if(inner) html += '<div class="agent-steps">'+inner+'</div>';
     if(finalText) html += md(finalText);
     contentEl.innerHTML = html || '<span class="retry-note">🤖 thinking…</span>';
     scrollDown();
   };
+  const pushStep=(h)=>{ items.push({step:h}); render(); };
+
+  // Approve/Reject buttons post the decision back to the backend, which
+  // un-pauses the agent loop. Delegated so it survives re-renders.
+  contentEl.addEventListener('click', async (e)=>{
+    const b=e.target.closest('.ap-btn'); if(!b) return;
+    const id=b.dataset.id; const decision=b.dataset.decision==='approve';
+    const it=items.find(x=>x.ap && x.ap.id===id); if(!it||it.ap.decided) return;
+    it.ap.decided=true; it.ap.approved=decision; render();
+    try{
+      await fetch(cfg.backendUrl.replace(/\/+$/,'')+'/agent/approve', {
+        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.backendToken},
+        body:JSON.stringify({id, decision: decision?'approve':'reject'})
+      });
+    }catch(_){ toast('Could not send decision', true); }
+  });
   render();
 
   stopRequested=false;
   try{ abortCtrl = new AbortController(); }catch(_){ abortCtrl=null; }
-  const opts={ method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.backendToken}, body:JSON.stringify({task:text, providerId: cfg.providerId || undefined}) };
+  const opts={ method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.backendToken}, body:JSON.stringify({task:text, providerId: cfg.providerId || undefined, autoApprove: !!cfg.autoApprove}) };
   if(canUseSignal && abortCtrl){ try{ opts.signal=abortCtrl.signal; }catch(_){} }
 
   try{
@@ -1187,22 +1222,54 @@ async function sendAgentTask(text){
         const t=line.trim(); if(!t.startsWith('data:')) continue;
         const data=t.slice(5).trim(); if(!data||data==='[DONE]') continue;
         let ev; try{ ev=JSON.parse(data); }catch(_){ continue; }
-        if(ev.type==='thinking'){ steps.push('<div class="agent-step">💭 '+esc(ev.text)+'</div>'); }
-        else if(ev.type==='tool'){ steps.push('<div class="agent-step tool">🔧 '+esc(ev.name)+' '+esc(JSON.stringify(ev.input||{}))+'</div>'); }
-        else if(ev.type==='tool_result'){ steps.push('<div class="agent-step res">↳ '+esc(String(ev.preview||'').replace(/\s+/g,' ')).slice(0,220)+'</div>'); }
+        if(ev.type==='thinking'){ pushStep('<div class="agent-step">💭 '+esc(ev.text)+'</div>'); }
+        else if(ev.type==='tool'){ pushStep('<div class="agent-step tool">🔧 '+esc(ev.name)+' '+esc(JSON.stringify(ev.input||{}))+'</div>'); }
+        else if(ev.type==='tool_result'){ pushStep('<div class="agent-step res">↳ '+esc(String(ev.preview||'').replace(/\s+/g,' ')).slice(0,220)+'</div>'); }
+        else if(ev.type==='approval'){ items.push({ap:{id:ev.id, name:ev.name, preview:ev.preview||{}, decided:false, approved:null}}); render(); }
+        else if(ev.type==='approval_result'){ const it=items.find(x=>x.ap&&x.ap.id===ev.id); if(it){ it.ap.decided=true; it.ap.approved=ev.approved; render(); } }
         else if(ev.type==='final'){ finalText=ev.text||''; }
-        else if(ev.type==='error'){ steps.push('<div class="agent-step err">❌ '+esc(ev.message||'error')+'</div>'); }
+        else if(ev.type==='error'){ pushStep('<div class="agent-step err">❌ '+esc(ev.message||'error')+'</div>'); }
         render();
       }
     }
   }catch(e){
-    steps.push('<div class="agent-step err">❌ '+esc(e.message||'request failed')+'</div>'); render();
+    pushStep('<div class="agent-step err">❌ '+esc(e.message||'request failed')+'</div>');
   }finally{
     contentEl.classList.remove('cursor-blink');
     if(finalText) messages.push({role:'assistant', content:finalText});
     setSending(false); abortCtrl=null; stopRequested=false;
     syncActiveSession(); renderSessions();
   }
+}
+
+// Render an approval card (diff for write_file, command for run_command).
+function renderApproval(ap){
+  const pv = ap.preview||{};
+  let body='';
+  if(pv.kind==='command'){
+    body = '<div class="d ctx">$ '+esc(pv.title||'')+'</div>';
+  }else if(pv.kind==='diff'){
+    body = (pv.body||'').split('\n').map(l=>{
+      const cls = l.startsWith('+')?'add':l.startsWith('-')?'del':'ctx';
+      return '<div class="d '+cls+'">'+esc(l)+'</div>';
+    }).join('');
+  }else{
+    body = '<div class="d ctx">'+esc(pv.body||'')+'</div>';
+  }
+  const icon = ap.name==='run_command' ? '⚡' : '✏️';
+  const title = pv.kind==='command' ? 'Run command' : (pv.title||ap.name);
+  let controls;
+  if(!ap.decided){
+    controls = '<div class="ap-btns">'+
+      '<button class="ap-btn ok" data-id="'+esc(ap.id)+'" data-decision="approve">✅ Approve</button>'+
+      '<button class="ap-btn no" data-id="'+esc(ap.id)+'" data-decision="reject">❌ Reject</button></div>';
+  }else{
+    controls = ap.approved
+      ? '<div class="ap-status ok">✅ Approved</div>'
+      : '<div class="ap-status no">❌ Rejected</div>';
+  }
+  return '<div class="ap-card"><div class="ap-title">'+icon+' '+esc(title)+'</div>'+
+         '<div class="ap-body">'+body+'</div>'+controls+'</div>';
 }
 
 // Route a composer submit to chat or agent depending on the toggle.

@@ -10,13 +10,23 @@
 
 import { Router } from 'express';
 import { runAgent } from '../agent/loop.js';
+import { resolveApproval } from '../agent/approvals.js';
 import { publish } from '../bus.js';
 import { info, error } from '../logger.js';
 
 const router = Router();
 
+// The phone posts here to approve/reject a paused mutating action.
+router.post('/agent/approve', (req, res) => {
+  const { id, decision } = req.body || {};
+  if (typeof id !== 'string') return res.status(400).json({ error: 'id is required' });
+  const approved = decision === true || decision === 'approve' || decision === 'approved';
+  const matched = resolveApproval(id, approved);
+  res.json({ ok: matched, approved });
+});
+
 router.post('/agent', async (req, res) => {
-  const { task, model, providerId } = req.body || {};
+  const { task, model, providerId, autoApprove } = req.body || {};
   if (typeof task !== 'string' || !task.trim()) {
     return res.status(400).json({ error: 'task (string) is required' });
   }
@@ -45,6 +55,7 @@ router.post('/agent', async (req, res) => {
       task,
       model, // undefined → backend uses its default (tool-capable) model
       providerId,
+      autoApprove: autoApprove === true,
       signal: controller.signal,
       onEvent: (ev) => {
         send(ev);

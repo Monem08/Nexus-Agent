@@ -5,18 +5,19 @@
 // Emits structured events via onEvent so the phone can show live activity.
 
 import { agentTurn } from '../providers/index.js';
-import { TOOL_SPECS, execTool } from './tools.js';
+import { TOOL_SPECS, execTool, MUTATING, previewAction } from './tools.js';
+import { requestApproval } from './approvals.js';
 import { audit, info } from '../logger.js';
 
 const AGENT_SYSTEM = `You are Nexus, a coding agent working inside a project workspace on the user's own server.
 
-You have tools to look around the project: list_files, read_file, and search_code. This version is READ-ONLY — you can inspect the project but cannot yet change files or run commands, so never claim you edited anything or ran a command.
+You have tools: list_files, read_file, search_code (look around), and write_file, run_command (make changes). Changes require the user's approval — they'll see each write or command and approve or reject it, so proceed naturally and don't ask for permission in text; the system handles that.
 
 How to work:
-- Use the tools to gather the facts you need before answering. Prefer looking things up over guessing.
-- Take small steps: list or search to find the right file, then read it.
-- When you have enough to answer the user's request, stop calling tools and give a clear, concise final answer in plain language. Reference file paths you actually saw.
-- If something can't be done in read-only mode, say so plainly.`;
+- Gather facts with the read tools before changing anything. Read a file before you overwrite it, and write back the COMPLETE new content.
+- Take small steps and explain briefly what you're about to do.
+- If the user rejects an action, adapt or stop — don't try to force it through.
+- When the task is done, stop calling tools and give a short, clear summary of what you changed.`;
 
 // Run one agent task. onEvent receives:
 //   {type:'thinking', text}          — model's reasoning/among-steps text
@@ -24,7 +25,7 @@ How to work:
 //   {type:'tool_result', name, preview} — short preview of the tool output
 //   {type:'final', text}             — the finished answer
 //   {type:'error', message}          — something went wrong
-export async function runAgent({ task, model, providerId, onEvent, signal, maxSteps = 8 }) {
+export async function runAgent({ task, model, providerId, onEvent, signal, autoApprove = false, maxSteps = 12 }) {
   const history = [{ role: 'user', content: task }];
   audit('agent_start', { task: String(task).slice(0, 200) });
 
@@ -58,6 +59,25 @@ export async function runAgent({ task, model, providerId, onEvent, signal, maxSt
       if (signal?.aborted) return;
       onEvent({ type: 'tool', name: tc.name, input: tc.input || {} });
       info(`agent tool: ${tc.name}(${JSON.stringify(tc.input || {})})`);
+
+      // Mutating tools pause for the user's approval unless auto-approve is on.
+      if (MUTATING.has(tc.name) && !autoApprove) {
+        let preview;
+        try {
+          preview = await previewAction(tc.name, tc.input || {});
+        } catch (e) {
+          preview = { kind: 'text', title: tc.name, body: e.message };
+        }
+        const apId = `ap_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+        onEvent({ type: 'approval', id: apId, name: tc.name, input: tc.input || {}, preview });
+        const approved = await requestApproval(apId, { signal });
+        onEvent({ type: 'approval_result', id: apId, approved });
+        if (!approved) {
+          results.push({ id: tc.id, name: tc.name, content: 'The user REJECTED this action. Do not retry it; adapt or stop.' });
+          continue;
+        }
+      }
+
       const out = await execTool(tc.name, tc.input);
       onEvent({ type: 'tool_result', name: tc.name, preview: out.slice(0, 240) });
       results.push({ id: tc.id, name: tc.name, content: out });

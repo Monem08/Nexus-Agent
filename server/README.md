@@ -91,6 +91,22 @@ Agent mode (tool use) works on both `openai` and `anthropic` transports —
 so you can develop the agent on free OpenRouter/NVIDIA models and save
 AgentRouter credits for real runs.
 
+## Agent mode (Phase 2/3)
+
+`POST /agent` runs the tool-using agent loop and streams steps as SSE.
+Tools, all confined to the workspace jail:
+
+- **read-only:** `list_files`, `read_file`, `search_code`
+- **mutating (need approval):** `write_file`, `run_command`
+
+Mutating actions pause and emit `{type:"approval", id, preview}` (a line
+diff for writes, the command for runs). The app shows Approve/Reject and
+posts the decision to `POST /agent/approve { id, decision }`, which
+un-pauses the loop. Rejected actions are never executed; the model is told
+and adapts. Send `"autoApprove": true` in the `/agent` body to skip the
+gate (runs writes/commands immediately — still jailed and command-filtered).
+Approvals auto-reject after 5 minutes with no response.
+
 ## Run 24/7 with PM2
 
 ```bash
