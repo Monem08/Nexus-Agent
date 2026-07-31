@@ -54,10 +54,11 @@
     border-bottom:1px solid var(--line);
     flex-shrink:0;
   }
-  .brand{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-weight:700;letter-spacing:-.5px;font-size:15px}
-  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan);animation:pulse 2.4s infinite}
+  .brand{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-weight:700;letter-spacing:-.5px;font-size:15px;white-space:nowrap;flex-shrink:0}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan);animation:pulse 2.4s infinite;flex-shrink:0}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-  .brand small{color:var(--txt-faint);font-weight:400;font-size:11px}
+  .brand small{color:var(--txt-faint);font-weight:400;font-size:10.5px;letter-spacing:0}
+  @media(max-width:430px){.brand small{display:none}}
 
   .model-pill{
     margin-left:auto;
@@ -87,17 +88,24 @@
   .thread{max-width:820px;margin:0 auto;padding:20px 16px 8px;display:flex;flex-direction:column;gap:18px}
 
   .empty{
-    text-align:center;padding:14vh 20px 0;color:var(--txt-faint);
+    text-align:center;padding:13vh 20px 0;color:var(--txt-faint);position:relative;
   }
-  .empty h1{font-family:var(--mono);font-size:22px;color:var(--txt);font-weight:700;letter-spacing:-1px;margin-bottom:8px}
+  .empty::before{content:"";position:absolute;top:8vh;left:50%;transform:translateX(-50%);
+    width:280px;height:280px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle,rgba(45,226,198,.14),transparent 66%);filter:blur(8px);z-index:0}
+  .empty>*{position:relative;z-index:1}
+  .empty .glyph{font-size:34px;margin-bottom:10px;filter:drop-shadow(0 0 14px rgba(45,226,198,.5))}
+  .empty h1{font-family:var(--mono);font-size:23px;color:var(--txt);font-weight:700;letter-spacing:-1px;margin-bottom:8px}
   .empty h1 span{color:var(--cyan)}
-  .empty p{font-size:13.5px;line-height:1.6;max-width:340px;margin:0 auto 22px}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:460px;margin:0 auto}
+  .empty p{font-size:13.5px;line-height:1.6;max-width:330px;margin:0 auto 24px}
+  .chips{display:flex;flex-direction:column;gap:9px;max-width:400px;margin:0 auto}
   .chip{
     background:var(--panel);border:1px solid var(--line);color:var(--txt-dim);
-    padding:9px 13px;border-radius:10px;font-size:12.5px;cursor:pointer;transition:all .15s;
+    padding:12px 15px;border-radius:12px;font-size:13px;cursor:pointer;transition:all .15s;
+    text-align:left;display:flex;align-items:center;gap:10px;
   }
-  .chip:hover{border-color:var(--cyan-dim);color:var(--txt)}
+  .chip:hover,.chip:active{border-color:var(--cyan-dim);color:var(--txt);background:var(--panel-2);transform:translateY(-1px)}
+  .chip .ci{opacity:.85;flex-shrink:0}
 
   /* ── Messages ── */
   .msg{display:flex;gap:11px;align-items:flex-start;animation:rise .25s ease}
@@ -164,9 +172,11 @@
   /* ── Composer ── */
   footer{padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line);flex-shrink:0}
   .composer{max-width:820px;margin:0 auto;position:relative}
-  .mode-row{display:flex;justify-content:flex-start;margin-bottom:8px}
-  .mode-toggle{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--txt-dim);background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;transition:all .15s}
-  .mode-toggle.agent{color:var(--ink);background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 12px rgba(45,226,198,.4)}
+  .mode-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;gap:10px}
+  .agent-seg{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:3px}
+  .agent-seg button{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--txt-dim);background:none;border:none;border-radius:999px;padding:6px 14px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
+  .agent-seg button.on{color:var(--ink);background:var(--cyan);box-shadow:0 0 10px rgba(45,226,198,.35)}
+  .mode-note{font-family:var(--mono);font-size:10.5px;color:var(--txt-faint)}
   .agent-steps{font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--txt-dim);background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;margin-bottom:8px;overflow-x:auto}
   .agent-step{white-space:pre-wrap;word-break:break-word}
   .agent-step.tool{color:var(--cyan)}
@@ -349,14 +359,10 @@
 <main id="main">
   <div class="thread" id="thread">
     <div class="empty" id="empty">
+      <div class="glyph" id="emptyGlyph">🧠</div>
       <h1>nexus<span>://</span>ready</h1>
-      <p>One key, every model. Paste your AgentRouter key in settings, pick a model, and go.</p>
-      <div class="chips" id="chips">
-        <div class="chip">Write a Python proxy checker bot</div>
-        <div class="chip">Explain forex risk management simply</div>
-        <div class="chip">Debug my Kotlin CI pipeline</div>
-        <div class="chip">Roast my code like a football commentator</div>
-      </div>
+      <p id="emptyLede">One key, every model. Pick a model and start chatting.</p>
+      <div class="chips" id="chips"></div>
     </div>
   </div>
 </main>
@@ -364,7 +370,11 @@
 <footer>
   <div class="composer">
     <div class="mode-row">
-      <button class="mode-toggle" id="agentToggle" type="button">💬 Chat</button>
+      <div class="agent-seg" id="agentSeg">
+        <button data-am="chat" class="on" type="button">💬 Chat</button>
+        <button data-am="agent" type="button">🤖 Agent</button>
+      </div>
+      <span class="mode-note" id="modeNote"></span>
     </div>
     <div class="attach-bar" id="attachBar" style="display:none"></div>
     <div class="input-row">
@@ -758,15 +768,12 @@ function renderThread(){
   const thread = $('#thread'); thread.innerHTML='';
   if(!messages.length){
     thread.innerHTML = `<div class="empty" id="empty">
+      <div class="glyph" id="emptyGlyph">🧠</div>
       <h1>nexus<span>://</span>ready</h1>
-      <p>One key, every model. Pick a model and start chatting.</p>
-      <div class="chips" id="chips">
-        <div class="chip">Write a Python proxy checker bot</div>
-        <div class="chip">Explain forex risk management simply</div>
-        <div class="chip">Debug my Kotlin CI pipeline</div>
-        <div class="chip">Roast my code like a football commentator</div>
-      </div>
+      <p id="emptyLede">One key, every model. Pick a model and start chatting.</p>
+      <div class="chips" id="chips"></div>
     </div>`;
+    updateEmptyChips();
     return;
   }
   messages.forEach(m=>{
@@ -1433,11 +1440,40 @@ function applyProvider(id, persist){
   if(persist) save();
 }
 function syncAgentToggle(){
-  const b = $('#agentToggle'); if(!b) return;
-  b.classList.toggle('agent', !!cfg.agentMode);
-  b.textContent = cfg.agentMode ? '🤖 Agent' : '💬 Chat';
+  const seg = $('#agentSeg');
+  if(seg) seg.querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('on', (b.dataset.am==='agent')===!!cfg.agentMode);
+  });
+  const note = $('#modeNote');
+  if(note) note.textContent = cfg.agentMode ? 'uses tools on your VPS' : '';
   const inp = $('#input');
   if(inp) inp.placeholder = cfg.agentMode ? 'Give the agent a task…' : 'Message the model…';
+  updateEmptyChips();
+}
+
+// Empty-state copy + suggestion chips adapt to the current mode.
+const CHAT_CHIPS = [
+  ['💡','Explain forex risk management simply'],
+  ['🐍','Write a Python proxy checker bot'],
+  ['🛠️','Debug my Kotlin CI pipeline'],
+  ['🎙️','Roast my code like a football commentator'],
+];
+const AGENT_CHIPS = [
+  ['📂','List the files in my project'],
+  ['📄','Read my README and summarise it'],
+  ['✍️','Create notes.txt with a short to-do list'],
+  ['⚡','Run: node --version'],
+];
+function updateEmptyChips(){
+  const box = $('#chips'); if(!box) return;
+  const agent = !!cfg.agentMode;
+  const glyph = $('#emptyGlyph'); if(glyph) glyph.textContent = agent ? '🤖' : '🧠';
+  const lede = $('#emptyLede');
+  if(lede) lede.textContent = agent
+    ? 'Give me a task and I\'ll use tools on your VPS to do it — you approve every change.'
+    : 'Chat with any model. Flip to Agent to have me work on your project.';
+  const chips = agent ? AGENT_CHIPS : CHAT_CHIPS;
+  box.innerHTML = chips.map(([ic,t])=>`<div class="chip" data-task="${esc(t)}"><span class="ci">${ic}</span>${esc(t)}</div>`).join('');
 }
 function updateKeyStatus(){
   const dot=$('#keyDot'), st=$('#keyStatus');
@@ -1477,17 +1513,18 @@ document.addEventListener('DOMContentLoaded', ()=>{
     else { submitComposer(); }
   };
 
-  // Agent / Chat toggle
-  $('#agentToggle').onclick = ()=>{
-    if(streaming) return;
-    if(!cfg.agentMode && cfg.conn!=='backend'){ toast('Agent mode needs the VPS backend', true); openSheet('settings'); return; }
-    cfg.agentMode = !cfg.agentMode; save(); syncAgentToggle();
-  };
+  // Agent / Chat segmented switch
+  $('#agentSeg').addEventListener('click', e=>{
+    const b = e.target.closest('button[data-am]'); if(!b || streaming) return;
+    const wantAgent = b.dataset.am==='agent';
+    if(wantAgent && cfg.conn!=='backend'){ toast('Agent mode needs the VPS backend', true); openSheet('settings'); return; }
+    cfg.agentMode = wantAgent; save(); syncAgentToggle();
+  });
 
   // chips (delegated on thread since it re-renders)
   $('#thread').addEventListener('click', e=>{
     const c = e.target.closest('.chip'); if(!c) return;
-    input.value = c.textContent; autoGrow(); updateSendState(); input.focus();
+    input.value = c.dataset.task || c.textContent; autoGrow(); updateSendState(); input.focus();
   });
 
   // header buttons
