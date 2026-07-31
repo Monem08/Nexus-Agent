@@ -2,8 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Nexus — AgentRouter Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Nexus — AI Agent</title>
+<!-- Install-to-home-screen (works when served from the VPS backend) -->
+<meta name="theme-color" content="#0a0e14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
 <style>
   /* ── Design tokens ──────────────────────────────────────────
      Palette: "deep terminal" — ink base, signal-cyan primary,
@@ -240,6 +249,22 @@
   /* sessions sidebar: left side */
   #sidebar{top:0;left:0;bottom:0;width:min(360px,84vw);border-radius:0;border-left:none;border-top:none;border-bottom:none;display:flex;flex-direction:column;transform:translateX(-20px)}
   #sidebar.open{transform:none}
+  #files{top:0;left:0;bottom:0;width:min(380px,88vw);border-radius:0;border-left:none;border-top:none;border-bottom:none;display:flex;flex-direction:column;transform:translateX(-20px)}
+  #files.open{transform:none}
+  .file-tree{overflow-y:auto;padding:8px 8px 20px;flex:1;font-family:var(--mono);font-size:13px}
+  .file-tree .empty-note{color:var(--txt-faint);font-size:12.5px;padding:16px;text-align:center}
+  .ft-row{display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:8px;cursor:pointer;color:var(--txt-dim);transition:background .12s;white-space:nowrap;overflow:hidden}
+  .ft-row:hover{background:var(--panel-2);color:var(--txt)}
+  .ft-row .tw{width:12px;flex-shrink:0;color:var(--txt-faint);text-align:center}
+  .ft-row .ic{flex-shrink:0}
+  .ft-row .nm{overflow:hidden;text-overflow:ellipsis}
+  .ft-row .sz{margin-left:auto;color:var(--txt-faint);font-size:10.5px;padding-left:8px}
+  .ft-children{overflow:hidden}
+  .file-view{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .fv-actions{padding:10px 12px;border-bottom:1px solid var(--line);flex-shrink:0}
+  .fv-actions .ghost-btn{width:100%;padding:10px}
+  .fv-pre{flex:1;overflow:auto;margin:0;padding:14px;background:#060a11;font-family:var(--mono);font-size:12.5px;line-height:1.6;color:#cdd9e5;white-space:pre;word-break:normal}
+  :root.light .fv-pre{background:#0d1117}
   .sess-list{overflow-y:auto;padding:8px;flex:1}
   .sess-item{display:flex;align-items:center;gap:8px;padding:11px 12px;border-radius:11px;cursor:pointer;transition:background .12s;margin-bottom:3px}
   .sess-item:hover{background:var(--panel-2)}
@@ -353,6 +378,9 @@
     <b id="pillName">no model</b>
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
   </div>
+  <button class="icon-btn" id="filesBtn" title="Files" style="display:none">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+  </button>
   <button class="icon-btn" id="newChatBtn" title="New chat">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
   </button>
@@ -408,6 +436,24 @@
     <button class="x" data-close="sidebar" style="margin-left:8px">×</button>
   </div>
   <div class="sess-list" id="sessionList"></div>
+</aside>
+
+<!-- ── File explorer ── -->
+<div class="overlay" id="ovFiles"></div>
+<aside class="sheet" id="files">
+  <div class="sheet-head">
+    <button class="ghost-btn" id="fvBack" style="display:none;padding:6px 10px">‹ Back</button>
+    <h2 id="filesTitle">files</h2>
+    <button class="ghost-btn" id="filesRefresh" style="margin-left:auto;padding:7px 10px" title="Reload">↻</button>
+    <button class="x" data-close="files" style="margin-left:8px">×</button>
+  </div>
+  <div class="file-tree" id="fileTree"></div>
+  <div class="file-view" id="fileView" style="display:none">
+    <div class="fv-actions">
+      <button class="ghost-btn" id="fvAsk">🤖 Ask agent about this</button>
+    </div>
+    <pre class="fv-pre" id="fvPre"></pre>
+  </div>
 </aside>
 
 <!-- ── Settings drawer ── -->
@@ -1290,6 +1336,81 @@ function renderApproval(ap){
          '<div class="ap-body">'+body+'</div>'+controls+'</div>';
 }
 
+/* ═══ File explorer ═══ */
+function fileIcon(name){
+  const e = (name.split('.').pop()||'').toLowerCase();
+  if(['js','mjs','ts','jsx','tsx'].includes(e)) return '📜';
+  if(['json'].includes(e)) return '🔧';
+  if(['md','txt'].includes(e)) return '📝';
+  if(['html','htm'].includes(e)) return '🌐';
+  if(['css'].includes(e)) return '🎨';
+  if(['png','jpg','jpeg','gif','svg','webp'].includes(e)) return '🖼️';
+  if(['py'].includes(e)) return '🐍';
+  if(['sh'].includes(e)) return '⚙️';
+  return '📄';
+}
+function fmtSize(n){ if(n==null) return ''; if(n<1024) return n+'B'; if(n<1048576) return (n/1024).toFixed(0)+'K'; return (n/1048576).toFixed(1)+'M'; }
+
+async function openFiles(){
+  if(cfg.conn!=='backend'){ toast('File explorer needs the VPS backend', true); return; }
+  showFileTree();
+  openSheet('files');
+  loadFileTree();
+}
+function showFileTree(){
+  $('#fileView').style.display='none';
+  $('#fileTree').style.display='';
+  $('#fvBack').style.display='none';
+  $('#filesTitle').textContent='files';
+}
+async function loadFileTree(){
+  const box=$('#fileTree');
+  box.innerHTML='<div class="empty-note">loading…</div>';
+  try{
+    const r=await fetch(cfg.backendUrl.replace(/\/+$/,'')+'/files',{headers:{'Authorization':'Bearer '+cfg.backendToken}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    const tree=j.tree||[];
+    if(!tree.length){ box.innerHTML='<div class="empty-note">Your project folder is empty.<br>Ask the agent to create something!</div>'; return; }
+    box.innerHTML=''; box.appendChild(renderTree(tree, 0));
+  }catch(e){ box.innerHTML='<div class="empty-note">Could not load files ('+esc(e.message)+')</div>'; }
+}
+function renderTree(nodes, depth){
+  const frag=document.createDocumentFragment();
+  for(const n of nodes){
+    const row=document.createElement('div');
+    row.className='ft-row';
+    row.style.paddingLeft=(9+depth*14)+'px';
+    if(n.type==='dir'){
+      let open=false;
+      const kids=document.createElement('div'); kids.className='ft-children'; kids.style.display='none';
+      kids.appendChild(renderTree(n.children||[], depth+1));
+      row.innerHTML='<span class="tw">▸</span><span class="ic">📁</span><span class="nm">'+esc(n.name)+'</span>';
+      row.onclick=()=>{ open=!open; kids.style.display=open?'':'none'; row.querySelector('.tw').textContent=open?'▾':'▸'; row.querySelector('.ic').textContent=open?'📂':'📁'; };
+      frag.appendChild(row); frag.appendChild(kids);
+    }else{
+      row.innerHTML='<span class="tw"></span><span class="ic">'+fileIcon(n.name)+'</span><span class="nm">'+esc(n.name)+'</span><span class="sz">'+fmtSize(n.size)+'</span>';
+      row.onclick=()=>openFileView(n.path);
+      frag.appendChild(row);
+    }
+  }
+  return frag;
+}
+async function openFileView(path){
+  $('#fileTree').style.display='none';
+  $('#fileView').style.display='flex';
+  $('#fvBack').style.display='';
+  $('#filesTitle').textContent=path.split('/').pop();
+  const pre=$('#fvPre'); pre.textContent='loading…';
+  $('#fvAsk').dataset.path=path;
+  try{
+    const r=await fetch(cfg.backendUrl.replace(/\/+$/,'')+'/file/read',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.backendToken},body:JSON.stringify({path})});
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.error||'HTTP '+r.status);
+    pre.textContent=j.content||'(empty file)';
+  }catch(e){ pre.textContent='Could not read file: '+e.message; }
+}
+
 // Route a composer submit to chat or agent depending on the toggle.
 function submitComposer(){
   const val = $('#input').value;
@@ -1369,7 +1490,7 @@ function setSending(on){
 }
 
 /* ═══ Sheets ═══ */
-const OV_MAP = { settings:'#ov1', picker:'#ov2', sidebar:'#ovSide' };
+const OV_MAP = { settings:'#ov1', picker:'#ov2', sidebar:'#ovSide', files:'#ovFiles' };
 function openSheet(id){ $('#'+id).classList.add('open'); $(OV_MAP[id]||'#ov1').classList.add('open'); }
 function closeSheet(id){ $('#'+id).classList.remove('open'); $(OV_MAP[id]||'#ov1').classList.remove('open'); }
 
@@ -1405,9 +1526,33 @@ function syncConnUI(){
   const pf = $('#providerField'); if(pf) pf.style.display = cfg.conn==='backend' ? '' : 'none';
   // Agent mode only makes sense in backend mode.
   if(cfg.conn!=='backend' && cfg.agentMode){ cfg.agentMode=false; }
+  const fb=$('#filesBtn'); if(fb) fb.style.display = cfg.conn==='backend' ? '' : 'none';
   syncAgentToggle();
   updateKeyStatus();
-  if(cfg.conn==='backend') fetchProviders();
+  if(cfg.conn==='backend'){ fetchProviders(); pingBackend(); }
+  else setDot('idle');
+}
+
+/* ═══ Live backend connection status (the header dot) ═══ */
+let pingTimer=null;
+function setDot(state){
+  const dot=document.querySelector('.brand .dot'); if(!dot) return;
+  const colors={ok:'var(--cyan)',bad:'var(--red)',idle:'var(--txt-faint)'};
+  const c=colors[state]||colors.idle;
+  dot.style.background=c; dot.style.boxShadow='0 0 12px '+c;
+  dot.title = state==='ok'?'VPS online':state==='bad'?'VPS unreachable':'not connected';
+}
+async function pingBackend(){
+  if(cfg.conn!=='backend' || !cfg.backendUrl){ setDot('idle'); return; }
+  try{
+    const r=await fetch(cfg.backendUrl.replace(/\/+$/,'')+'/health',{cache:'no-store'});
+    setDot(r.ok?'ok':'bad');
+  }catch(e){ setDot('bad'); }
+}
+function startPing(){
+  if(pingTimer) clearInterval(pingTimer);
+  pingBackend();
+  pingTimer=setInterval(pingBackend, 20000);
 }
 
 // Pull the list of providers the VPS backend has configured.
@@ -1504,6 +1649,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     if(sessions[0].model){ cfg.model=sessions[0].model; cfg.modelLabel=sessions[0].modelLabel||sessions[0].model; $('#pillName').textContent=cfg.modelLabel; }
   } else { newSession(); }
   renderThread(); renderSessions();
+  startPing();
 
   // theme
   const savedTheme = localStorage.getItem('nexus_theme');
@@ -1541,6 +1687,15 @@ document.addEventListener('DOMContentLoaded', ()=>{
   // header buttons
   $('#settingsBtn').onclick = ()=> openSheet('settings');
   $('#menuBtn').onclick = ()=>{ renderSessions(); openSheet('sidebar'); };
+  $('#filesBtn').onclick = ()=> openFiles();
+  $('#filesRefresh').onclick = ()=> loadFileTree();
+  $('#fvBack').onclick = ()=> showFileTree();
+  $('#fvAsk').onclick = ()=>{
+    const p = $('#fvAsk').dataset.path || '';
+    closeSheet('files');
+    if(!cfg.agentMode){ cfg.agentMode = true; save(); syncAgentToggle(); }
+    const inp = $('#input'); inp.value = 'Look at '+p+' and explain what it does.'; autoGrow(); updateSendState(); inp.focus();
+  };
   $('#newChatBtn').onclick = ()=>{
     if(streaming){ stopRequested=true; try{abortCtrl?.abort();}catch(_){} }
     syncActiveSession(); newSession(); clearPendingImages(); renderThread(); renderSessions();

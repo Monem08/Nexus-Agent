@@ -56,6 +56,32 @@ app.get(['/', '/app'], (_req, res) => {
   res.status(404).send('frontend file not found next to the server');
 });
 
+// ── PWA: app icon + manifest (so the phone can "Add to Home Screen") ──
+const ICON_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">' +
+  '<rect width="512" height="512" rx="112" fill="#0a0e14"/>' +
+  '<circle cx="256" cy="132" r="28" fill="#2de2c6"/>' +
+  '<text x="256" y="372" font-family="monospace" font-size="248" font-weight="700" fill="#2de2c6" text-anchor="middle">N</text>' +
+  '</svg>';
+app.get('/icon.svg', (_req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400').type('image/svg+xml').send(ICON_SVG);
+});
+app.get(['/manifest.webmanifest', '/manifest.json'], (_req, res) => {
+  res.json({
+    name: 'Nexus Agent',
+    short_name: 'Nexus',
+    description: 'Your personal AI coding agent',
+    start_url: '/',
+    scope: '/',
+    display: 'standalone',
+    background_color: '#0a0e14',
+    theme_color: '#0a0e14',
+    icons: [
+      { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+    ],
+  });
+});
+
 // ── Everything else: auth + rate limit ───────────────────────
 app.use(rateLimit);
 app.use(requireAuth);
