@@ -77,6 +77,85 @@ export async function chatComplete({ providerId, model, messages, temperature = 
   return openaiChat(p, useModel, messages, temperature, signal);
 }
 
+// ── Streaming chat completion ────────────────────────────────
+// Async generator yielding plain text deltas, normalized across
+// transports. Callers (the /chat SSE route, and later the agent loop)
+// don't care which provider shape produced them.
+export async function* chatStream({ providerId, model, messages, temperature = 0.7, signal }) {
+  const p = getProvider(providerId);
+  if (!p) {
+    const err = new Error('no AI provider is configured. Set PROVIDER_* env vars in server/.env');
+    err.status = 503;
+    throw err;
+  }
+  const useModel = model || p.model;
+  if (!useModel) {
+    const err = new Error('no model specified and provider has no default model');
+    err.status = 400;
+    throw err;
+  }
+
+  const isAnthropic = p.transport === 'anthropic';
+  const url = isAnthropic ? `${p.baseUrl}/messages` : `${p.baseUrl}/chat/completions`;
+
+  let body;
+  let headers;
+  if (isAnthropic) {
+    const system = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n');
+    const convo = messages.filter((m) => m.role !== 'system').map((m) => ({ role: m.role, content: m.content }));
+    body = {
+      model: useModel,
+      system: system || undefined,
+      messages: convo,
+      max_tokens: 4096,
+      temperature: Math.max(0, Math.min(1, temperature)),
+      stream: true,
+    };
+    headers = { 'Content-Type': 'application/json', 'x-api-key': p.key, 'anthropic-version': '2023-06-01' };
+  } else {
+    body = { model: useModel, messages, temperature, stream: true };
+    headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${p.key}` };
+  }
+
+  const resp = await fetch(url, { method: 'POST', signal, headers, body: JSON.stringify(body) });
+  if (!resp.ok) {
+    const raw = await resp.json().catch(() => ({}));
+    const err = new Error(raw?.error?.message || `provider error ${resp.status}`);
+    err.status = resp.status === 401 ? 502 : resp.status;
+    throw err;
+  }
+
+  // Parse the upstream SSE stream line by line.
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith('data:')) continue;
+      const data = t.slice(5).trim();
+      if (!data || data === '[DONE]') continue;
+      let j;
+      try {
+        j = JSON.parse(data);
+      } catch {
+        continue; // partial chunk
+      }
+      if (isAnthropic) {
+        if (j.type === 'content_block_delta' && j.delta?.text) yield j.delta.text;
+      } else {
+        const delta = j.choices?.[0]?.delta?.content;
+        if (delta) yield delta;
+      }
+    }
+  }
+}
+
 async function openaiChat(p, model, messages, temperature, signal) {
   const resp = await fetch(`${p.baseUrl}/chat/completions`, {
     method: 'POST',

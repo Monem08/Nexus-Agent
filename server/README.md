@@ -105,8 +105,19 @@ ingress:
 cloudflared tunnel run nexus-agent      # or install as a service
 ```
 
-Then point the Nexus frontend's base URL at `https://agent.yourdomain.com`
-and set `CORS_ORIGINS` to the origin serving the UI.
+## Connect the Nexus frontend
+
+The frontend (`../nexus-agentrouter-chat-4.html`) has a **Settings → Route**
+toggle:
+
+- **Direct API** — the browser calls the gateway itself (original behavior).
+- **VPS Backend** — chat is routed through this server. Enter the backend
+  URL (e.g. `https://agent.yourdomain.com`) and the `AGENT_TOKEN`. The
+  provider key then lives only on the server, never in the browser.
+
+In backend mode `/chat` streams an OpenAI-shaped SSE response, so replies
+render token-by-token exactly like the direct path. Set `CORS_ORIGINS` to
+the origin serving the UI so the browser is allowed to call the backend.
 
 ## Smoke test
 
@@ -127,4 +138,9 @@ curl -s $BASE/file/read -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"path":"../../etc/passwd"}'
 curl -s $BASE/exec -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"cmd":"rm -rf /"}'
+
+# streaming chat (needs PROVIDER_* set) — should emit SSE deltas then [DONE]:
+curl -sN $BASE/chat -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"stream":true,"messages":[{"role":"user","content":"say hi"}]}'
 ```
