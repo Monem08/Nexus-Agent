@@ -130,17 +130,19 @@
   .content strong{color:#fff;font-weight:600}
   :root.light .content strong{color:#000}
   .content blockquote{border-left:3px solid var(--cyan-dim);padding-left:12px;color:var(--txt-dim);margin:0 0 10px}
-  .codewrap{position:relative;margin:0 0 12px}
+  .codewrap{position:relative;margin:0 0 12px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#060a11}
+  :root.light .codewrap{background:#0d1117}
+  .codewrap::before{content:"";position:absolute;top:12px;left:14px;width:9px;height:9px;border-radius:50%;
+    background:#ff5c72;box-shadow:15px 0 0 #ffb454,30px 0 0 #2de2c6;z-index:2}
   .codewrap pre{
-    background:#060a11;border:1px solid var(--line);border-radius:10px;
-    padding:14px 14px 14px;overflow-x:auto;font-family:var(--mono);font-size:12.8px;line-height:1.6;
+    background:none;border:none;border-radius:0;
+    padding:34px 14px 14px;overflow-x:auto;font-family:var(--mono);font-size:12.8px;line-height:1.6;
   }
-  :root.light .codewrap pre{background:#0d1117}
   .codewrap pre code{background:none;border:none;padding:0;color:#cdd9e5}
   .copy-code{
-    position:absolute;top:8px;right:8px;
-    background:var(--panel);border:1px solid var(--line);color:var(--txt-dim);
-    font-family:var(--mono);font-size:10.5px;padding:4px 9px;border-radius:7px;cursor:pointer;opacity:.75;transition:all .15s;
+    position:absolute;top:8px;right:8px;z-index:2;
+    background:rgba(17,23,34,.7);border:1px solid var(--line);color:var(--txt-dim);
+    font-family:var(--mono);font-size:10.5px;padding:4px 9px;border-radius:7px;cursor:pointer;opacity:.8;transition:all .15s;
   }
   .copy-code:hover{opacity:1;color:var(--cyan);border-color:var(--cyan-dim)}
   .cursor-blink::after{content:'▋';color:var(--cyan);animation:blink 1s steps(2) infinite;margin-left:1px}
@@ -177,11 +179,17 @@
   .agent-seg button{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--txt-dim);background:none;border:none;border-radius:999px;padding:6px 14px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
   .agent-seg button.on{color:var(--ink);background:var(--cyan);box-shadow:0 0 10px rgba(45,226,198,.35)}
   .mode-note{font-family:var(--mono);font-size:10.5px;color:var(--txt-faint)}
-  .agent-steps{font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--txt-dim);background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;margin-bottom:8px;overflow-x:auto}
+  .agent-steps{font-family:var(--mono);font-size:12px;line-height:1.75;color:var(--txt-dim);background:var(--panel-2);border:1px solid var(--line-soft);border-left:2px solid var(--cyan-dim);border-radius:10px;padding:10px 12px;margin-bottom:8px;overflow-x:auto}
+  .agent-steps .ah{display:flex;align-items:center;gap:6px;color:var(--cyan-dim);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--line-soft)}
   .agent-step{white-space:pre-wrap;word-break:break-word}
   .agent-step.tool{color:var(--cyan)}
   .agent-step.res{color:var(--txt-faint);padding-left:6px}
   .agent-step.err{color:var(--red)}
+  .working{display:inline-flex;align-items:center;gap:8px;color:var(--cyan);font-family:var(--mono);font-size:12.5px}
+  .working .dots{display:inline-flex;gap:3px}
+  .working .dots i{width:5px;height:5px;border-radius:50%;background:var(--cyan);display:inline-block;animation:bounce 1.2s infinite}
+  .working .dots i:nth-child(2){animation-delay:.15s}.working .dots i:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
   select#providerSel{font-family:var(--sans);font-size:14px;color:var(--txt);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;appearance:none;-webkit-appearance:none}
   .ap-card{border:1px solid var(--amber);border-radius:10px;margin:8px 0;overflow:hidden}
   .ap-title{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--amber);padding:8px 12px;background:rgba(255,180,84,.08);display:flex;align-items:center;gap:6px}
@@ -199,9 +207,9 @@
   .input-row{
     display:flex;align-items:flex-end;gap:8px;
     background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:6px 6px 6px 14px;
-    transition:border-color .15s;
+    transition:border-color .18s, box-shadow .18s;
   }
-  .input-row:focus-within{border-color:var(--cyan-dim)}
+  .input-row:focus-within{border-color:var(--cyan-dim);box-shadow:0 0 0 3px rgba(45,226,198,.10)}
   textarea{
     flex:1;background:none;border:none;outline:none;resize:none;color:var(--txt);
     font-family:var(--sans);font-size:15px;line-height:1.5;max-height:160px;padding:8px 0;
@@ -209,10 +217,10 @@
   textarea::placeholder{color:var(--txt-faint)}
   .send{
     width:38px;height:38px;border-radius:11px;border:none;cursor:pointer;flex-shrink:0;
-    background:var(--cyan);color:var(--ink);display:grid;place-items:center;transition:all .15s;
+    background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));color:var(--ink);display:grid;place-items:center;transition:all .15s;
   }
   .send:disabled{background:var(--line);color:var(--txt-faint);cursor:not-allowed}
-  .send:not(:disabled):hover{box-shadow:0 0 16px rgba(45,226,198,.4)}
+  .send:not(:disabled):hover{box-shadow:0 0 18px rgba(45,226,198,.5);transform:translateY(-1px)}
   .send:active{transform:scale(.92)}
   .send.stop{background:var(--red)}
   .foot-hint{text-align:center;font-size:10.5px;color:var(--txt-faint);margin-top:7px;font-family:var(--mono)}
@@ -1181,16 +1189,18 @@ async function sendAgentTask(text){
   const contentEl = addMsg('assistant','');
   contentEl.classList.add('cursor-blink');
   const items=[]; let finalText='';   // items: {step:html} or {ap:{...}}
-  const render=()=>{
+  const workingHTML = '<span class="working">🤖 working<span class="dots"><i></i><i></i><i></i></span></span>';
+  const render=(done)=>{
     let inner='';
     for(const it of items){
       if(it.step!==undefined) inner += it.step;
       else if(it.ap) inner += renderApproval(it.ap);
     }
     let html='';
-    if(inner) html += '<div class="agent-steps">'+inner+'</div>';
+    if(inner) html += '<div class="agent-steps"><div class="ah">◆ agent activity</div>'+inner+'</div>';
     if(finalText) html += md(finalText);
-    contentEl.innerHTML = html || '<span class="retry-note">🤖 thinking…</span>';
+    else if(!done) html += '<div style="margin-top:'+(inner?'6px':'0')+'">'+workingHTML+'</div>';
+    contentEl.innerHTML = html || (done ? '<span class="agent-step res">(no response)</span>' : workingHTML);
     scrollDown();
   };
   const pushStep=(h)=>{ items.push({step:h}); render(); };
@@ -1244,6 +1254,7 @@ async function sendAgentTask(text){
   }finally{
     contentEl.classList.remove('cursor-blink');
     if(finalText) messages.push({role:'assistant', content:finalText});
+    render(true); // clear the "working…" indicator
     setSending(false); abortCtrl=null; stopRequested=false;
     syncActiveSession(); renderSessions();
   }
