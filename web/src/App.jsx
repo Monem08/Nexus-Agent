@@ -8,6 +8,7 @@ import Composer from './components/Composer.jsx';
 import Settings from './components/Settings.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import FileExplorer from './components/FileExplorer.jsx';
+import Terminal from './components/Terminal.jsx';
 import ModelPicker from './components/ModelPicker.jsx';
 import Toast from './components/Toast.jsx';
 
@@ -133,6 +134,7 @@ export default function App() {
         if (ev.type === 'thinking') addItem({ step: { kind: 'thinking', text: ev.text } });
         else if (ev.type === 'tool') addItem({ step: { kind: 'tool', name: ev.name, input: ev.input } });
         else if (ev.type === 'tool_result') addItem({ step: { kind: 'res', text: ev.preview } });
+        else if (ev.type === 'command') addItem({ command: { cmd: ev.cmd, output: ev.output } });
         else if (ev.type === 'approval') addItem({ ap: { id: ev.id, name: ev.name, preview: ev.preview || {}, decided: false, approved: null } });
         else if (ev.type === 'approval_result') patchMsg(idx, (m) => ({ ...m, items: (m.items || []).map((it) => it.ap && it.ap.id === ev.id ? { ...it, ap: { ...it.ap, decided: true, approved: ev.approved } } : it) }));
         else if (ev.type === 'artifact') addItem({ artifact: { path: ev.path, content: ev.content, bytes: ev.bytes, truncated: ev.truncated } });
@@ -206,7 +208,7 @@ export default function App() {
     <>
       <Header
         cfg={cfg} dotState={dot} providerName={providerName}
-        onMenu={() => setSheet('sidebar')} onFiles={openFiles} onNewChat={newChat}
+        onMenu={() => setSheet('sidebar')} onFiles={openFiles} onTerminal={() => (cfg.conn === 'backend' ? setSheet('terminal') : showToast('Terminal needs the VPS backend', true))} onNewChat={newChat}
         onToggleTheme={() => { const t = theme === 'light' ? 'dark' : 'light'; setTheme(t); saveTheme(t); }}
         onSettings={() => setSheet('settings')} onModelPick={() => setSheet('picker')}
       />
@@ -225,6 +227,7 @@ export default function App() {
       <Settings open={sheet === 'settings'} cfg={cfg} providers={providers} onSave={(nc) => { setCfg(nc); saveCfg(nc); }} onClose={() => setSheet(null)} onRefreshProviders={() => api.fetchProviders(cfg).then(setProviders)} />
       <FileExplorer open={sheet === 'files'} tree={files.tree} loading={files.loading} error={files.error} viewing={files.viewing}
         onClose={() => setSheet(null)} onRefresh={openFiles} onOpenFile={openFile} onBack={() => setFiles((f) => ({ ...f, viewing: null }))} onAsk={askAboutFile} />
+      <Terminal open={sheet === 'terminal'} cfg={cfg} onClose={() => setSheet(null)} />
       <ModelPicker open={sheet === 'picker'} cfg={cfg} onPick={(m) => { updateCfg({ model: m.id, modelLabel: m.label }); setSheet(null); }} onClose={() => setSheet(null)} />
       <Toast toast={toast} />
     </>

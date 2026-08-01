@@ -203,6 +203,32 @@ export async function fetchProviders(cfg) {
     return (await r.json()).providers || [];
   } catch { return []; }
 }
+// ── Live terminal (WS /stream + /exec) ───────────────────────
+export function openStream(cfg, onEvent) {
+  const b = backendBase(cfg);
+  let wsUrl;
+  try {
+    const u = new URL(b);
+    u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsUrl = u.origin + '/stream?token=' + encodeURIComponent(cfg.backendToken);
+  } catch {
+    return null;
+  }
+  const ws = new WebSocket(wsUrl);
+  ws.onmessage = (e) => { try { onEvent(JSON.parse(e.data)); } catch {} };
+  return ws;
+}
+export async function runExec(cfg, cmd) {
+  const r = await fetch(backendBase(cfg) + '/exec', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...bearer(cfg) },
+    body: JSON.stringify({ cmd }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+  return j;
+}
+
 export async function health(cfg) {
   try {
     const r = await fetch(backendBase(cfg) + '/health', { cache: 'no-store' });

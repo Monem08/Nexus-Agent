@@ -1,6 +1,8 @@
 const dotColor = { ok: 'var(--cyan)', bad: 'var(--red)', idle: 'var(--txt-faint)' };
 
-export default function Header({ cfg, dotState, providerName, onMenu, onFiles, onNewChat, onToggleTheme, onSettings, onModelPick }) {
+import Icon from './Icon.jsx';
+
+export default function Header({ cfg, dotState, providerName, onMenu, onFiles, onTerminal, onNewChat, onToggleTheme, onSettings, onModelPick }) {
   const c = dotColor[dotState] || dotColor.idle;
   const sub = cfg.conn === 'backend' ? (providerName || 'vps') : 'agentrouter';
   return (
@@ -16,6 +18,11 @@ export default function Header({ cfg, dotState, providerName, onMenu, onFiles, o
         <b>{cfg.modelLabel || cfg.model || 'no model'}</b>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
       </div>
+      {cfg.conn === 'backend' && (
+        <button className="icon-btn" title="Terminal" onClick={onTerminal}>
+          <Icon name="terminal" size={17} />
+        </button>
+      )}
       {cfg.conn === 'backend' && (
         <button className="icon-btn" title="Files" onClick={onFiles}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>

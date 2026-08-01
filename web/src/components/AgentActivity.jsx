@@ -45,6 +45,19 @@ function FileCard({ art }) {
   );
 }
 
+// A command the agent ran — rendered like a mini terminal.
+function CommandBlock({ output }) {
+  const lines = String(output || '').split('\n');
+  return (
+    <div className="term-block">
+      {lines.map((l, i) => {
+        const cls = l.startsWith('$') ? 'cmd' : /^\[exit/.test(l) ? 'exit' : 'out';
+        return <div className={'term-line ' + cls} key={i}>{l || ' '}</div>;
+      })}
+    </div>
+  );
+}
+
 function ApprovalCard({ ap, onApprove }) {
   const pv = ap.preview || {};
   let body;
@@ -96,7 +109,8 @@ export default function AgentActivity({ items, finalText, working, onApprove }) 
           {items.map((it, i) =>
             it.ap ? <ApprovalCard ap={it.ap} onApprove={onApprove} key={it.ap.id} />
               : it.artifact ? <FileCard art={it.artifact} key={i} />
-                : <Step s={it.step} key={i} />,
+                : it.command ? <CommandBlock output={it.command.output} key={i} />
+                  : <Step s={it.step} key={i} />,
           )}
         </div>
       )}

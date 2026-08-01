@@ -64,6 +64,8 @@ const P = {
   upload: <><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /><path d="M12 15V3M8 7l4-4 4 4" /></>,
   download: <><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /><path d="M12 3v12M8 11l4 4 4-4" /></>,
   copy: <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></>,
+  terminal: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 9l3 3-3 3M13 15h4" /></>,
+  send: <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />,
 };
 
 export const ICON_NAMES = Object.keys(P);

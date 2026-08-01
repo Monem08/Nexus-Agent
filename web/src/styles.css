@@ -364,3 +364,29 @@
 .file-card .fc-btn:active{transform:scale(.92)}
 .upload-chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12.5px;color:var(--txt);background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:7px 11px}
 .upload-chip .uc-tag{color:var(--cyan-dim);font-size:10.5px;margin-left:2px}
+
+/* ── Live terminal ── */
+#terminal{top:0;right:0;bottom:0;width:min(560px,96vw);border-radius:0;border-right:none;border-top:none;border-bottom:none;display:flex;flex-direction:column;transform:translateX(20px)}
+#terminal.open{transform:none}
+.term-dot{width:8px;height:8px;border-radius:50%;background:var(--txt-faint);box-shadow:none;margin-left:6px}
+.term-dot.on{background:#4ade80;box-shadow:0 0 8px #4ade80}
+.term-body{flex:1;overflow:auto;background:#060a11;padding:12px 14px;font-family:var(--mono);font-size:12.5px;line-height:1.55;color:#cdd9e5}
+:root.light .term-body{background:#0d1117}
+.term-line{white-space:pre-wrap;word-break:break-word}
+.term-line.cmd{color:#4ade80}
+.term-line.cmd .tp{color:#4ade80;margin-right:6px;font-weight:700}
+.term-line.err{color:var(--red)}
+.term-line.exit{color:var(--txt-faint)}
+.term-line.sys{color:var(--txt-dim);margin-bottom:6px}
+.term-input{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--panel);flex-shrink:0}
+.term-input .tp{color:#4ade80;font-family:var(--mono);font-weight:700}
+.term-input input{flex:1;background:none;border:none;outline:none;color:var(--txt);font-family:var(--mono);font-size:13px}
+.term-input input::placeholder{color:var(--txt-faint)}
+.term-run{width:34px;height:34px;border-radius:9px;border:none;background:var(--cyan);color:var(--ink);display:grid;place-items:center;cursor:pointer;flex-shrink:0}
+.term-run:disabled{background:var(--line);color:var(--txt-faint);cursor:not-allowed}
+
+/* agent command block (in chat) */
+.term-block{background:#060a11;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:6px 0;overflow-x:auto;font-family:var(--mono);font-size:12px;line-height:1.55;color:#cdd9e5}
+:root.light .term-block{background:#0d1117}
+.term-block .term-line.cmd{color:#4ade80}
+.term-block .term-line.exit{color:var(--txt-faint)}

@@ -57,7 +57,8 @@ export async function runAgent({ task, model, providerId, onEvent, signal, autoA
     const results = [];
     for (const tc of toolCalls) {
       if (signal?.aborted) return;
-      onEvent({ type: 'tool', name: tc.name, input: tc.input || {} });
+      const isCmd = tc.name === 'run_command';
+      if (!isCmd) onEvent({ type: 'tool', name: tc.name, input: tc.input || {} });
       info(`agent tool: ${tc.name}(${JSON.stringify(tc.input || {})})`);
 
       // Mutating tools pause for the user's approval unless auto-approve is on.
@@ -79,7 +80,11 @@ export async function runAgent({ task, model, providerId, onEvent, signal, autoA
       }
 
       const out = await execTool(tc.name, tc.input);
-      onEvent({ type: 'tool_result', name: tc.name, preview: out.slice(0, 240) });
+      if (isCmd) {
+        onEvent({ type: 'command', cmd: tc.input?.cmd || '', output: out.length <= 8192 ? out : out.slice(0, 8192) + '\n…(truncated)' });
+      } else {
+        onEvent({ type: 'tool_result', name: tc.name, preview: out.slice(0, 240) });
+      }
       results.push({ id: tc.id, name: tc.name, content: out });
 
       // A successful write → surface the file in the chat with copy/download.
