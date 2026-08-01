@@ -50,10 +50,22 @@ app.get('/health', (_req, res) => {
 // the same origin as the backend — so it defaults to backend mode with
 // no CORS to configure. The AGENT_TOKEN is still entered by the user.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FRONTEND = path.resolve(__dirname, '..', '..', 'nexus-agentrouter-chat-4.html');
+const WEBDIST = path.resolve(__dirname, '..', 'webdist'); // built Vite + React app
+const LEGACY_HTML = path.resolve(__dirname, '..', '..', 'nexus-agentrouter-chat-4.html');
+const HAS_REACT = fs.existsSync(path.join(WEBDIST, 'index.html'));
+
+// Serve the built React app's static assets (hashed files under /assets).
+if (HAS_REACT) app.use(express.static(WEBDIST, { index: false, maxAge: '1h' }));
+
 app.get(['/', '/app'], (_req, res) => {
-  if (fs.existsSync(FRONTEND)) return res.sendFile(FRONTEND);
-  res.status(404).send('frontend file not found next to the server');
+  if (HAS_REACT) return res.sendFile(path.join(WEBDIST, 'index.html'));
+  if (fs.existsSync(LEGACY_HTML)) return res.sendFile(LEGACY_HTML);
+  res.status(404).send('frontend not built — run `npm run build` in web/');
+});
+// The original single-file UI stays reachable at /legacy as a fallback.
+app.get('/legacy', (_req, res) => {
+  if (fs.existsSync(LEGACY_HTML)) return res.sendFile(LEGACY_HTML);
+  res.status(404).send('legacy html not found');
 });
 
 // ── PWA: app icon + manifest (so the phone can "Add to Home Screen") ──
