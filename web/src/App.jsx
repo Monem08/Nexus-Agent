@@ -116,7 +116,7 @@ export default function App() {
       await api.sendChat({ cfg, messages: base, signal: ctrl.signal, onToken: (full) => patchMsg(idx, (m) => ({ ...m, content: full })) });
       patchMsg(idx, (m) => ({ ...m, streaming: false }));
     } catch (e) {
-      patchMsg(idx, (m) => ({ ...m, streaming: false, content: (m.content ? m.content + '\n\n' : '') + '⚠️ ' + e.message, error: true }));
+      patchMsg(idx, (m) => ({ ...m, streaming: false, content: (m.content ? m.content + '\n\n' : '') + e.message, error: true }));
     } finally { setStreaming(false); abortRef.current = null; }
   };
 

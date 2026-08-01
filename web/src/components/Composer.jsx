@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import Icon from './Icon.jsx';
 
 export default function Composer({ cfg, streaming, value, setValue, onSubmit, onStop, onSetMode }) {
   const ref = useRef(null);
@@ -19,8 +20,8 @@ export default function Composer({ cfg, streaming, value, setValue, onSubmit, on
       <div className="composer">
         <div className="mode-row">
           <div className="agent-seg">
-            <button type="button" className={!agent ? 'on' : ''} onClick={() => onSetMode(false)}>💬 Chat</button>
-            <button type="button" className={agent ? 'on' : ''} onClick={() => onSetMode(true)}>🤖 Agent</button>
+            <button type="button" className={!agent ? 'on' : ''} onClick={() => onSetMode(false)}><Icon name="chat" size={15} /> Chat</button>
+            <button type="button" className={agent ? 'on' : ''} onClick={() => onSetMode(true)}><Icon name="robot" size={15} /> Agent</button>
           </div>
           <span className="mode-note">{agent ? 'uses tools on your VPS' : ''}</span>
         </div>

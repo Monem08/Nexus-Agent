@@ -1,21 +1,23 @@
+import Icon from './Icon.jsx';
+
 const CHAT_CHIPS = [
-  ['💡', 'Explain forex risk management simply'],
-  ['🐍', 'Write a Python proxy checker bot'],
-  ['🛠️', 'Debug my Kotlin CI pipeline'],
-  ['🎙️', 'Roast my code like a football commentator'],
+  ['bulb', 'Explain forex risk management simply'],
+  ['code', 'Write a Python proxy checker bot'],
+  ['tools', 'Debug my Kotlin CI pipeline'],
+  ['mic', 'Roast my code like a football commentator'],
 ];
 const AGENT_CHIPS = [
-  ['📂', 'List the files in my project'],
-  ['📄', 'Read my README and summarise it'],
-  ['✍️', 'Create notes.txt with a short to-do list'],
-  ['⚡', 'Run: node --version'],
+  ['folderOpen', 'List the files in my project'],
+  ['file', 'Read my README and summarise it'],
+  ['pencil', 'Create notes.txt with a short to-do list'],
+  ['bolt', 'Run: node --version'],
 ];
 
 export default function Empty({ agentMode, onChip }) {
   const chips = agentMode ? AGENT_CHIPS : CHAT_CHIPS;
   return (
     <div className="empty">
-      <div className="glyph">{agentMode ? '🤖' : '🧠'}</div>
+      <div className="glyph"><Icon name={agentMode ? 'robot' : 'brain'} size={34} strokeWidth={1.7} style={{ color: 'var(--cyan)' }} /></div>
       <h1>nexus<span>://</span>ready</h1>
       <p>
         {agentMode
@@ -25,7 +27,7 @@ export default function Empty({ agentMode, onChip }) {
       <div className="chips">
         {chips.map(([ic, t]) => (
           <div className="chip" key={t} onClick={() => onChip(t)}>
-            <span className="ci">{ic}</span>{t}
+            <span className="ci"><Icon name={ic} size={17} /></span>{t}
           </div>
         ))}
       </div>

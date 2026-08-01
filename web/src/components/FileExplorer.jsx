@@ -1,16 +1,17 @@
 import { useState } from 'react';
+import Icon from './Icon.jsx';
 
 function iconFor(name) {
   const e = (name.split('.').pop() || '').toLowerCase();
-  if (['js', 'mjs', 'ts', 'jsx', 'tsx'].includes(e)) return '📜';
-  if (e === 'json') return '🔧';
-  if (['md', 'txt'].includes(e)) return '📝';
-  if (['html', 'htm'].includes(e)) return '🌐';
-  if (e === 'css') return '🎨';
-  if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(e)) return '🖼️';
-  if (e === 'py') return '🐍';
-  if (e === 'sh') return '⚙️';
-  return '📄';
+  if (['js', 'mjs', 'ts', 'jsx', 'tsx'].includes(e)) return 'fileText';
+  if (e === 'json') return 'wrench';
+  if (['md', 'txt'].includes(e)) return 'file';
+  if (['html', 'htm'].includes(e)) return 'globe';
+  if (e === 'css') return 'palette';
+  if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(e)) return 'image';
+  if (e === 'py') return 'code';
+  if (e === 'sh') return 'gear';
+  return 'file';
 }
 function fmtSize(n) {
   if (n == null) return '';
@@ -27,7 +28,7 @@ function Node({ node, depth, onOpen }) {
       <>
         <div className="ft-row" style={pad} onClick={() => setOpen(!open)}>
           <span className="tw">{open ? '▾' : '▸'}</span>
-          <span className="ic">{open ? '📂' : '📁'}</span>
+          <span className="ic"><Icon name={open ? 'folderOpen' : 'folder'} size={15} /></span>
           <span className="nm">{node.name}</span>
         </div>
         {open && <div className="ft-children">{(node.children || []).map((c) => <Node key={c.path} node={c} depth={depth + 1} onOpen={onOpen} />)}</div>}
@@ -37,7 +38,7 @@ function Node({ node, depth, onOpen }) {
   return (
     <div className="ft-row" style={pad} onClick={() => onOpen(node.path)}>
       <span className="tw" />
-      <span className="ic">{iconFor(node.name)}</span>
+      <span className="ic"><Icon name={iconFor(node.name)} size={15} /></span>
       <span className="nm">{node.name}</span>
       <span className="sz">{fmtSize(node.size)}</span>
     </div>
@@ -58,7 +59,7 @@ export default function FileExplorer({ open, tree, loading, error, viewing, onCl
         {viewing ? (
           <div className="file-view">
             <div className="fv-actions">
-              <button className="ghost-btn" onClick={() => onAsk(viewing.path)}>🤖 Ask agent about this</button>
+              <button className="ghost-btn" onClick={() => onAsk(viewing.path)}><Icon name="robot" size={15} /> Ask agent about this</button>
             </div>
             <pre className="fv-pre">{viewing.content}</pre>
           </div>

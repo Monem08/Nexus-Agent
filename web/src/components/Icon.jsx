@@ -22,7 +22,7 @@ const P = {
   // 🐍 code (used for .js/.py file glyph)
   code: <path d="M8 6 3 12l5 6M16 6l5 6-5 6" />,
   // 📂 folder-open
-  folderOpen: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2H4l-1 9V7z" />,
+  folderOpen: <><path d="M4 19a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v1" /><path d="M2 12h19l-2.2 6.3a1 1 0 0 1-1 .7H4a2 2 0 0 1-2-2z" /></>,
   // 📁 folder
   folder: <path d="M4 20a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2z" />,
   // 📄 / 📝 file
@@ -34,7 +34,7 @@ const P = {
   // ✏️ / ✍️ pencil / edit
   pencil: <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />,
   // 💭 thought bubble
-  think: <><path d="M7 15a3 3 0 0 1 0-6 4 4 0 0 1 7.7-1.3A3.5 3.5 0 0 1 17 15z" /><circle cx="6" cy="18.5" r="1" /><circle cx="9" cy="21" r="0.6" /></>,
+  think: <><path d="M8.5 14a3.5 3.5 0 1 1 2.6-5.8A3.5 3.5 0 1 1 15.5 14z" /><circle cx="7" cy="18" r="1.3" /><circle cx="4.5" cy="20.5" r="0.8" /></>,
   // 💬 chat bubble
   chat: <path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />,
   // 💡 lightbulb

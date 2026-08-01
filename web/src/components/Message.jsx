@@ -1,5 +1,6 @@
 import { md } from '../lib/md.js';
 import AgentActivity from './AgentActivity.jsx';
+import Icon from './Icon.jsx';
 
 export default function Message({ msg, cfg, onApprove, onCopy, onRegen }) {
   const isUser = msg.role === 'user';
@@ -23,6 +24,11 @@ export default function Message({ msg, cfg, onApprove, onCopy, onRegen }) {
           <AgentActivity items={msg.items || []} finalText={msg.finalText || ''} working={!!msg.working} onApprove={onApprove} />
         ) : isUser ? (
           <div className="content">{msg.content}</div>
+        ) : msg.error ? (
+          <div className="content" style={{ color: 'var(--red)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <Icon name="warning" size={16} style={{ marginTop: 3 }} />
+            <span dangerouslySetInnerHTML={{ __html: md(msg.content || '') }} />
+          </div>
         ) : (
           <div className={'content' + (msg.streaming ? ' cursor-blink' : '')} onClick={onContentClick} dangerouslySetInnerHTML={{ __html: md(msg.content || '') }} />
         )}
