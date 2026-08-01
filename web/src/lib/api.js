@@ -176,6 +176,16 @@ export async function fetchFiles(cfg) {
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return (await r.json()).tree || [];
 }
+export async function uploadFile(cfg, path, content, encoding) {
+  const r = await fetch(backendBase(cfg) + '/file/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...bearer(cfg) },
+    body: JSON.stringify({ path, content, encoding }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+  return j;
+}
 export async function readFile(cfg, path) {
   const r = await fetch(backendBase(cfg) + '/file/read', {
     method: 'POST',

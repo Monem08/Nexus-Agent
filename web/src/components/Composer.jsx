@@ -1,8 +1,9 @@
 import { useRef, useEffect } from 'react';
 import Icon from './Icon.jsx';
 
-export default function Composer({ cfg, streaming, value, setValue, onSubmit, onStop, onSetMode }) {
+export default function Composer({ cfg, streaming, value, setValue, onSubmit, onStop, onSetMode, onUpload }) {
   const ref = useRef(null);
+  const fileRef = useRef(null);
   useEffect(() => {
     const t = ref.current;
     if (t) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 160) + 'px'; }
@@ -26,6 +27,14 @@ export default function Composer({ cfg, streaming, value, setValue, onSubmit, on
           <span className="mode-note">{agent ? 'uses tools on your VPS' : ''}</span>
         </div>
         <div className="input-row">
+          {cfg.conn === 'backend' && (
+            <>
+              <button className="attach-btn" title="Upload a file to your project" onClick={() => fileRef.current?.click()}>
+                <Icon name="paperclip" size={18} />
+              </button>
+              <input ref={fileRef} type="file" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ''; }} />
+            </>
+          )}
           <textarea
             ref={ref}
             rows={1}

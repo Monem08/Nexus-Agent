@@ -135,6 +135,7 @@ export default function App() {
         else if (ev.type === 'tool_result') addItem({ step: { kind: 'res', text: ev.preview } });
         else if (ev.type === 'approval') addItem({ ap: { id: ev.id, name: ev.name, preview: ev.preview || {}, decided: false, approved: null } });
         else if (ev.type === 'approval_result') patchMsg(idx, (m) => ({ ...m, items: (m.items || []).map((it) => it.ap && it.ap.id === ev.id ? { ...it, ap: { ...it.ap, decided: true, approved: ev.approved } } : it) }));
+        else if (ev.type === 'artifact') addItem({ artifact: { path: ev.path, content: ev.content, bytes: ev.bytes, truncated: ev.truncated } });
         else if (ev.type === 'final') patchMsg(idx, (m) => ({ ...m, finalText: ev.text || '' }));
         else if (ev.type === 'error') addItem({ step: { kind: 'err', text: ev.message } });
       } });
@@ -185,6 +186,20 @@ export default function App() {
   };
 
   const copyMsg = (msg) => { try { navigator.clipboard.writeText(msg.content || msg.finalText || ''); showToast('Copied ✓'); } catch {} };
+
+  // Upload a file from the phone into the VPS workspace.
+  const onUpload = async (file) => {
+    if (cfg.conn !== 'backend') { showToast('Upload needs the VPS backend', true); return; }
+    if (file.size > 8 * 1024 * 1024) { showToast('File too large (max 8 MB)', true); return; }
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      await api.uploadFile(cfg, file.name, btoa(bin), 'base64');
+      showToast('Uploaded ' + file.name + ' ✓');
+      setMessages((m) => [...m, { role: 'user', content: '', upload: { name: file.name, size: file.size } }]);
+    } catch (e) { showToast('Upload failed: ' + e.message, true); }
+  };
   const providerName = providers.find((p) => p.id === cfg.providerId)?.name;
 
   return (
@@ -204,7 +219,7 @@ export default function App() {
           )}
         </div>
       </main>
-      <Composer cfg={cfg} streaming={streaming} value={input} setValue={setInput} onSubmit={submit} onStop={stop} onSetMode={setMode} />
+      <Composer cfg={cfg} streaming={streaming} value={input} setValue={setInput} onSubmit={submit} onStop={stop} onSetMode={setMode} onUpload={onUpload} />
 
       <Sidebar open={sheet === 'sidebar'} sessions={sessions} activeId={activeId} onSwitch={switchChat} onNew={newChat} onDelete={deleteChat} onClose={() => setSheet(null)} />
       <Settings open={sheet === 'settings'} cfg={cfg} providers={providers} onSave={(nc) => { setCfg(nc); saveCfg(nc); }} onClose={() => setSheet(null)} onRefreshProviders={() => api.fetchProviders(cfg).then(setProviders)} />

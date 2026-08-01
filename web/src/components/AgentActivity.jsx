@@ -1,5 +1,49 @@
+import { useState } from 'react';
 import { md } from '../lib/md.js';
 import Icon from './Icon.jsx';
+
+function fmtSize(n) {
+  if (n == null) return '';
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1048576).toFixed(1) + ' MB';
+}
+
+// A file the agent created — shown in chat with copy + download.
+function FileCard({ art }) {
+  const [copied, setCopied] = useState(false);
+  const canGrab = typeof art.content === 'string' && art.content.length > 0;
+  const name = (art.path || 'file').split('/').pop();
+  const copy = () => {
+    if (!canGrab) return;
+    try { navigator.clipboard.writeText(art.content); setCopied(true); setTimeout(() => setCopied(false), 1400); } catch {}
+  };
+  const download = () => {
+    if (!canGrab) return;
+    const blob = new Blob([art.content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return (
+    <div className="file-card">
+      <span className="fc-ic"><Icon name="fileText" size={20} /></span>
+      <div className="fc-meta">
+        <div className="fc-name">{art.path}</div>
+        <div className="fc-sz">{fmtSize(art.bytes)}{art.truncated ? ' · too large to copy here — open in Files' : ''}</div>
+      </div>
+      {canGrab && (
+        <div className="fc-actions">
+          <button className="fc-btn" onClick={copy} title="Copy contents">{copied ? <Icon name="check" size={15} /> : <Icon name="copy" size={15} />}</button>
+          <button className="fc-btn" onClick={download} title="Download">
+            <Icon name="download" size={15} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ApprovalCard({ ap, onApprove }) {
   const pv = ap.preview || {};
@@ -50,7 +94,9 @@ export default function AgentActivity({ items, finalText, working, onApprove }) 
         <div className="agent-steps">
           {hasSteps && <div className="ah"><Icon name="diamond" size={9} /> agent activity</div>}
           {items.map((it, i) =>
-            it.ap ? <ApprovalCard ap={it.ap} onApprove={onApprove} key={it.ap.id} /> : <Step s={it.step} key={i} />,
+            it.ap ? <ApprovalCard ap={it.ap} onApprove={onApprove} key={it.ap.id} />
+              : it.artifact ? <FileCard art={it.artifact} key={i} />
+                : <Step s={it.step} key={i} />,
           )}
         </div>
       )}

@@ -58,6 +58,12 @@ const P = {
   refresh: <path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5" />,
   cornerArrow: <path d="M9 5v6a2 2 0 0 0 2 2h8M15 9l4 4-4 4" />,
   diamond: <path d="M12 3 21 12 12 21 3 12z" />,
+
+  // file upload / download / copy
+  paperclip: <path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49" />,
+  upload: <><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /><path d="M12 15V3M8 7l4-4 4 4" /></>,
+  download: <><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /><path d="M12 3v12M8 11l4 4 4-4" /></>,
+  copy: <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></>,
 };
 
 export const ICON_NAMES = Object.keys(P);

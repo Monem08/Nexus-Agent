@@ -81,6 +81,19 @@ export async function runAgent({ task, model, providerId, onEvent, signal, autoA
       const out = await execTool(tc.name, tc.input);
       onEvent({ type: 'tool_result', name: tc.name, preview: out.slice(0, 240) });
       results.push({ id: tc.id, name: tc.name, content: out });
+
+      // A successful write → surface the file in the chat with copy/download.
+      if (tc.name === 'write_file' && !/^(Error|Blocked)\b/.test(out)) {
+        const content = typeof tc.input?.content === 'string' ? tc.input.content : '';
+        onEvent({
+          type: 'artifact',
+          path: tc.input?.path || 'file',
+          bytes: Buffer.byteLength(content),
+          // cap what we ship back; huge files are still on disk / in the explorer
+          content: content.length <= 256 * 1024 ? content : '',
+          truncated: content.length > 256 * 1024,
+        });
+      }
     }
 
     history.push({ role: 'tool_results', results });

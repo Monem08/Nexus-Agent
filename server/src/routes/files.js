@@ -76,6 +76,27 @@ router.post('/file/read', async (req, res) => {
   }
 });
 
+// Upload a file into the workspace. Body: { path, content, encoding? }
+// encoding "base64" for binary uploads; otherwise content is treated as utf8.
+router.post('/file/upload', async (req, res) => {
+  const { path: p, content, encoding } = req.body || {};
+  if (typeof content !== 'string') {
+    return res.status(400).json({ error: 'content (string) is required' });
+  }
+  try {
+    const abs = safeResolve(p);
+    await fs.mkdir(path.dirname(abs), { recursive: true });
+    const buf = encoding === 'base64' ? Buffer.from(content, 'base64') : Buffer.from(content, 'utf8');
+    await fs.writeFile(abs, buf);
+    const rel = toWorkspaceRel(abs);
+    audit('file_upload', { path: rel, bytes: buf.length });
+    publish('file:upload', { path: rel });
+    res.json({ ok: true, path: rel, bytes: buf.length });
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
 router.post('/file/write', async (req, res) => {
   const { path: p, content } = req.body || {};
   if (typeof content !== 'string') {

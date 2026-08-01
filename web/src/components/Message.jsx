@@ -20,7 +20,11 @@ export default function Message({ msg, cfg, onApprove, onCopy, onRegen }) {
             {msg.images.map((im, i) => <img key={i} src={im.url || `data:${im.media_type};base64,${im.data}`} alt="" />)}
           </div>
         )}
-        {msg.agent ? (
+        {msg.upload ? (
+          <div className="content">
+            <span className="upload-chip"><Icon name="paperclip" size={14} /> {msg.upload.name}<span className="uc-tag">uploaded</span></span>
+          </div>
+        ) : msg.agent ? (
           <AgentActivity items={msg.items || []} finalText={msg.finalText || ''} working={!!msg.working} onApprove={onApprove} />
         ) : isUser ? (
           <div className="content">{msg.content}</div>
